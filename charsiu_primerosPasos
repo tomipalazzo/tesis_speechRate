@@ -1,0 +1,9 @@
+from Charsiu import charsiu_predictive_aligner
+# English
+# initialize a model
+charsiu = charsiu_predictive_aligner(aligner='charsiu/en_w2v2_fc_10ms')
+# perform textless alignment
+alignment = charsiu.align(audio='./local/SA1.WAV')
+# Or
+# perform textless alignment and output the results to a textgrid file
+charsiu.serve(audio='./local/SA1.WAV', save_to='./local/SA1.TextGrid')
