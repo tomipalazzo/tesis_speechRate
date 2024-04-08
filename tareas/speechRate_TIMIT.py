@@ -81,3 +81,41 @@ plt.title('Word Duration in Time Domain')
 plt.show()
 
 # %%
+
+def speed_by_word(sample, freq=16000):
+
+    sample = TIMIT_train[0]
+    words = sample['word_detail']['utterance']
+    start = sample['word_detail']['start']
+    stop = sample['word_detail']['stop']
+    time_of_word = []
+    word_interval = np.zeros(len(words))
+    speed_of_word = np.zeros(len(words))
+    amount_of_time = stop[-1]
+
+
+
+    for i in range(len(words)):
+        word_interval[i] = stop[i] - start[i]
+        
+
+    
+    speed_of_word = 1 /(word_interval / 16000)
+    print(speed_of_word)
+    i = 0
+    for j in range(stop[-1]):
+        i_am_in_the_border = j >= stop[i]
+        if i_am_in_the_border:
+            i += 1
+        time_of_word.append(speed_of_word[i])
+
+    
+    # Plot using time as the x-axis
+    time = np.arange(amount_of_time) / FREQUENCY
+    plt.plot(time, time_of_word)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Words')
+    plt.title('Word Duration in Time Domain')
+# %%
+speed_by_word(sample=sample)
+# %%
