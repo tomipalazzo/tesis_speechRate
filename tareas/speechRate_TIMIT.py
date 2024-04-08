@@ -88,7 +88,7 @@ def speed_by_word(sample, freq=16000):
     words = sample['word_detail']['utterance']
     start = sample['word_detail']['start']
     stop = sample['word_detail']['stop']
-    time_of_word = []
+    time_of_word = np.zeros(stop[-1])
     word_interval = np.zeros(len(words))
     speed_of_word = np.zeros(len(words))
     amount_of_time = stop[-1]
@@ -103,11 +103,11 @@ def speed_by_word(sample, freq=16000):
     speed_of_word = 1 /(word_interval / 16000)
     print(speed_of_word)
     i = 0
-    for j in range(stop[-1]):
+    for j in range(start[0], stop[-1]):
         i_am_in_the_border = j >= stop[i]
         if i_am_in_the_border:
             i += 1
-        time_of_word.append(speed_of_word[i])
+        time_of_word[j] = speed_of_word[i]
 
     
     # Plot using time as the x-axis
