@@ -83,7 +83,7 @@ plt.show()
 
 # %%
 
-def speed_by_word(sample, freq=16000):
+def speed_by_word(sample):
 
     sample = TIMIT_train[0]
     words = sample['word_detail']['utterance']
@@ -132,66 +132,46 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 # Generate sample data
-id = np.arange(0,X.shape[0],10000)
+id = np.arange(0,X.shape[0],10)
 len(id)
 #%%
 
 X_sample = X[id]
 y_sample = y[id]
+X_sample.shape
 
+#%%
 # Add a constant to X for the regression model
-X = sm.add_constant(X)
+X_sample = sm.add_constant(X_sample)
+y_sample = sm.add_constant(y_sample)
 
 # Set the bandwidth
-bandwidth = 0.5
+bandwidth = 0.05
+y_sample.shape
+#%%
 
 # Fit the Nadaraya-Watson kernel regression model with the specified bandwidth
-model = sm.nonparametric.KernelReg(endog=y, exog=X[:, 1], var_type='c', reg_type='lc', bw=[bandwidth])
-y_pred, y_std = model.fit(X[:, 1])
+model = sm.nonparametric.KernelReg(endog=y_sample[:,1], exog=X_sample[:, 1], var_type='c', reg_type='lc', bw=[bandwidth])
+y_pred, y_std = model.fit(X_sample[:, 1])
+
+
 
 # Plot the data and the regression line
 plt.figure(figsize=(10, 6))
-plt.scatter(X[:, 1], y, alpha=0.5, label='Data')
-plt.plot(X[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
-plt.fill_between(X[:, 1], y_pred - y_std, y_pred + y_std, color='red', alpha=0.2)
+plt.scatter(X_sample[:, 1], y_sample[:,1], alpha=0.5, label='Data')
+plt.plot(X_sample[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
+plt.fill_between(X_sample[:, 1], y_pred - y_std, y_pred + y_std, color='red', alpha=0.2)
 plt.xlabel('X')
 plt.ylabel('y')
 plt.title('Nonparametric Regression with Specified Bandwidth')
 plt.legend()
 plt.show()
 
-# %%
-import numpy as np
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
 
-# Generate sample data
-n = 100
-X = np.linspace(0, 10, n)
-y = np.sin(X) + np.random.normal(0, 0.1, n)
+# %% All the information in one dataSet
+# Idea: make a DF of all the PHONES and add columns with important information
 
-# Set the bandwidth
-bandwidth = 0.5
-
-# Fit the Nadaraya-Watson kernel regression model with the specified bandwidth
-model = sm.nonparametric.KernelReg(endog=y, exog=X, var_type='c', reg_type='lc', bw=[bandwidth])
-y_pred, y_std = model.fit(X)
-
-# Plot the data and the regression line
-plt.figure(figsize=(10, 6))
-plt.scatter(X, y, alpha=0.5, label='Data')
-plt.plot(X, y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
-plt.fill_between(X, y_pred - y_std, y_pred + y_std, color='red', alpha=0.2)
-plt.xlabel('X')
-plt.ylabel('y')
-plt.title('Nonparametric Regression with Specified Bandwidth')
-plt.legend()
-plt.show()
-
-# %% Toda la informacion a un DataFrame
-# Idea: hacer un DF con: Sample_id
-
-TIMIT_test_df = []
+TIMIT_test_phones_df = []
 for sample in TIMIT_test:
     sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
     dataframe = pd.DataFrame(sample['phonetic_detail'])
@@ -200,17 +180,38 @@ for sample in TIMIT_test:
     dataframe['sample_id'] = sample_id
     
 
-    TIMIT_test_df.append(dataframe)
+    TIMIT_test_phones_df.append(dataframe)
 
-TIMIT_test_df = pd.concat(TIMIT_test_df)
+TIMIT_test_phones_df = pd.concat(TIMIT_test_phones_df)
+
+
+
+
+
+# %% All the information in one dataSet
+# Idea: make a DF of all the WORDS and add columns with important information
+
+TIMIT_test_words_df = []
+for sample in TIMIT_test:
+    sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
+    dataframe = pd.DataFrame(sample['word_detail'])
+    dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
+    dataframe["phone_rate"] = 1/dataframe["duration_s"] 
+    dataframe['sample_id'] = sample_id
+    
+
+    TIMIT_test_words_df.append(dataframe)
+
+TIMIT_test_words_df = pd.concat(TIMIT_test_words_df)
+
 
 
 
 
 # %%
-TIMIT_test_df.head()
+TIMIT_test_phones_df.head()
 # %%
-TIMIT_test_df.groupby("sample_id")["duration_s"].sum()
+TIMIT_test_phones_df.groupby("sample_id")["duration_s"].sum()
 
 # %%
 # for k,g in 
@@ -222,5 +223,9 @@ TIMIT_test_df_samples = pd.DataFrame()
 TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_df.groupby("sample_id").apply(fn)
 # %%
 
+
 def fn(x):
     return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
+
+#%%
+
