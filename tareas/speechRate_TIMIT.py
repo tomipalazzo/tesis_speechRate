@@ -6,6 +6,7 @@ import IPython.display as ipd
 import numpy as np
 import statsmodels.api as sm
 import random
+import functions as fn
 from datasets import load_dataset
 
 
@@ -54,144 +55,28 @@ print(show)
 
 #%% Show words duration
 
-def show_words_duration(sample):
-    words = sample['word_detail']['utterance']
-    start = sample['word_detail']['start']
-    stop = sample['word_detail']['stop']
-
-    words.insert(0, 'silence')
-    stop.insert(0, start[0])
-    time_of_word = []
-
-    i = 0
-    for j in range(stop[-1]):
-        i_am_in_the_border = j >= stop[i]
-        if i_am_in_the_border:
-            i += 1
-        time_of_word.append(words[i])
-
-    # Plot using frequency as the x-axis
-    time = np.arange(stop[-1]) / SR
-    plt.plot(time, time_of_word)
-    plt.xlabel('Time (s)')
-    plt.ylabel('Words')
-    plt.title('Word Duration in Time Domain')
-    plt.show()
 
 #%%
-show_words_duration(sample=SAMPLE)
+fn.show_words_duration(sample=SAMPLE, SR=SR)
 
 # %%
 
-def speed_by_word(sample, SR=16000):
-    words = sample['word_detail']['utterance']
-    start = sample['word_detail']['start']
-    stop = sample['word_detail']['stop']
-    time_of_word = np.zeros(stop[-1])
-    word_interval = np.zeros(len(words))
-    speed_of_word = np.zeros(len(words))
-    amount_of_time = stop[-1]
 
-
-
-    for i in range(len(words)):
-        word_interval[i] = stop[i] - start[i]
-        
-
-    
-    speed_of_word = 1 /(word_interval / SR)
-    print(speed_of_word)
-    i = 0
-    for j in range(start[0], stop[-1]):
-        i_am_in_the_border = j >= stop[i]
-        if i_am_in_the_border:
-            i += 1
-        time_of_word[j] = speed_of_word[i]
-
-    
-    # Plot using time as the x-axis
-    time = np.arange(amount_of_time) / SR
-    plt.plot(time, time_of_word)
-    plt.xlabel('Time (s)')
-    plt.ylabel('Words')
-    plt.title('Word Duration in Time Domain')
-
-    return time, time_of_word
 # %%
-def speed_by_phone(sample, SR=16000):
-
-    phones = sample['phonetic_detail']['utterance']
-    start = sample['phonetic_detail']['start']
-    stop = sample['phonetic_detail']['stop']
-    time_of_phone = np.zeros(stop[-1])
-    phone_interval = np.zeros(len(phones))
-    speed_of_phone = np.zeros(len(phones))
-    amount_of_time = stop[-1]
-
-    for i in range(len(phones)):
-        phone_interval[i] = stop[i] - start[i]
-        
-
-    
-    speed_of_phone = 1 /(phone_interval / SR)
-    print(speed_of_phone)
-    i = 0
-    for j in range(start[0], stop[-1]):
-        i_am_in_the_border = j >= stop[i]
-        if i_am_in_the_border:
-            i += 1
-        time_of_phone[j] = speed_of_phone[i]
-
-    
-    # Plot using time as the x-axis
-    time = np.arange(amount_of_time) / SR
-    plt.plot(time, time_of_phone)
-    plt.xlabel('Time (s)')
-    plt.ylabel('Words')
-    plt.title('Word Duration in Time Domain')
-
-    return time, time_of_phone
 
 #%%
 
-X, y = speed_by_phone(sample=SAMPLE)
+X, y = fn.speed_by_phone(sample=SAMPLE)
 X.shape[0]
 # %%
-speed_by_phone(sample=SAMPLE)
+fn.speed_by_phone(sample=SAMPLE)
 
 
 #%% SPEED REGRESSION
-def speed_smoothed_regression(X, y, bandwidth=0.1):
-    
-    # if data is large, subsample
-    max_length = 10000
-    if(len(X) > max_length):
-        id = np.arange(0,X.shape[0],10)
-        X = X[id]
-        y = y[id]
 
-    # Add a constant to X for the regression model
-    X = sm.add_constant(X)
-    y = sm.add_constant(y)
-
-    # Fit the Nadaraya-Watson kernel regression model with the specified bandwidth
-    model = sm.nonparametric.KernelReg(endog=y[:,1], exog=X[:, 1], var_type='c', reg_type='lc', bw=[bandwidth])
-    y_pred, y_std = model.fit(X[:, 1])
-
-
-
-    # Plot the data and the regression line
-    plt.figure(figsize=(10, 6))
-    plt.scatter(X[:, 1], y[:,1], alpha=0.5, label='Data')
-    plt.plot(X[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
-    plt.xlabel('X')
-    plt.ylabel('y')
-    plt.title('Nonparametric Regression with Specified Bandwidth')
-    plt.legend()
-    plt.show()
 
 #%%
-speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
+fn.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
 # %% All the information in one dataSet
 # Idea: make a DF of all the PHONES and add columns with important information
 
@@ -240,7 +125,7 @@ TIMIT_test_phones_df.groupby("sample_id")["duration_s"].sum()
 # %%
 # for k,g in 
 
-def fn(x):
+def aux(x):
     return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
 
 TIMIT_test_df_samples = pd.DataFrame()
@@ -248,7 +133,7 @@ TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_phones_df.groupby("sample_id")
 # %%
 
 
-def fn(x):
+def aux(x):
     return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
 
 #%%
