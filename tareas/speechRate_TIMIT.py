@@ -83,7 +83,7 @@ plt.show()
 
 # %%
 
-def speed_by_word(sample):
+def speed_by_word(sample, SR=16000):
 
     sample = TIMIT_train[0]
     words = sample['word_detail']['utterance']
@@ -120,12 +120,56 @@ def speed_by_word(sample):
 
     return time, time_of_word
 # %%
+def speed_by_phone(sample, SR=16000):
+
+    sample = TIMIT_train[0]
+    phones = sample['phonetic_detail']['utterance']
+    start = sample['phonetic_detail']['start']
+    stop = sample['phonetic_detail']['stop']
+    time_of_phone = np.zeros(stop[-1])
+    phone_interval = np.zeros(len(phones))
+    speed_of_phone = np.zeros(len(phones))
+    amount_of_time = stop[-1]
+
+    for i in range(len(phones)):
+        phone_interval[i] = stop[i] - start[i]
+        
+
+    
+    speed_of_phone = 1 /(phone_interval / SR)
+    print(speed_of_phone)
+    i = 0
+    for j in range(start[0], stop[-1]):
+        i_am_in_the_border = j >= stop[i]
+        if i_am_in_the_border:
+            i += 1
+        time_of_phone[j] = speed_of_phone[i]
+
+    
+    # Plot using time as the x-axis
+    time = np.arange(amount_of_time) / SR
+    plt.plot(time, time_of_phone)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Words')
+    plt.title('Word Duration in Time Domain')
+
+    return time, time_of_phone
 
 #%%
 
 X, y = speed_by_word(sample=sample)
 X.shape[0]
 # %%
+speed_by_phone(sample=sample)
+
+
+#%% SPEED REGRESSION
+
+
+
+
+
+#%%
 
 import numpy as np
 import statsmodels.api as sm
@@ -133,23 +177,17 @@ import matplotlib.pyplot as plt
 
 # Generate sample data
 id = np.arange(0,X.shape[0],10)
-len(id)
-#%%
+
 
 X_sample = X[id]
 y_sample = y[id]
-X_sample.shape
 
-#%%
 # Add a constant to X for the regression model
 X_sample = sm.add_constant(X_sample)
 y_sample = sm.add_constant(y_sample)
 
-# Set the bandwidth
-bandwidth = 0.05
-y_sample.shape
-#%%
 
+#%%
 # Fit the Nadaraya-Watson kernel regression model with the specified bandwidth
 model = sm.nonparametric.KernelReg(endog=y_sample[:,1], exog=X_sample[:, 1], var_type='c', reg_type='lc', bw=[bandwidth])
 y_pred, y_std = model.fit(X_sample[:, 1])
@@ -160,7 +198,6 @@ y_pred, y_std = model.fit(X_sample[:, 1])
 plt.figure(figsize=(10, 6))
 plt.scatter(X_sample[:, 1], y_sample[:,1], alpha=0.5, label='Data')
 plt.plot(X_sample[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
-plt.fill_between(X_sample[:, 1], y_pred - y_std, y_pred + y_std, color='red', alpha=0.2)
 plt.xlabel('X')
 plt.ylabel('y')
 plt.title('Nonparametric Regression with Specified Bandwidth')
@@ -220,7 +257,7 @@ def fn(x):
     return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
 
 TIMIT_test_df_samples = pd.DataFrame()
-TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_df.groupby("sample_id").apply(fn)
+TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_phones_df.groupby("sample_id").apply(fn)
 # %%
 
 
