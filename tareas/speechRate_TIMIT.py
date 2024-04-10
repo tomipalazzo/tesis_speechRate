@@ -20,10 +20,8 @@ TIMIT_test = TIMIT['test']
 SR = 16000
 SAMPLE = TIMIT_train[500]
 
-#%%
-# Select a sample from the training set
 
-
+#%% Show the sample
 # Access the audio data and sample rate
 audio_data = SAMPLE['audio']['array']
 sample_rate = SAMPLE['audio']['sampling_rate']
@@ -53,29 +51,19 @@ else:
     show = 'There are different sampling rates in the dataset'
 print(show)
 
+
 #%% Show words duration
-
-
-#%%
 fn.show_words_duration(sample=SAMPLE, SR=SR)
 
-# %%
-
-
-# %%
-
-#%%
+#%% SPEED BY WORD
 
 X, y = fn.speed_by_phone(sample=SAMPLE)
 X.shape[0]
-# %%
+# %% SPEED BY PHONE
 fn.speed_by_phone(sample=SAMPLE)
 
 
 #%% SPEED REGRESSION
-
-
-#%%
 fn.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
 # %% All the information in one dataSet
 # Idea: make a DF of all the PHONES and add columns with important information
@@ -93,10 +81,6 @@ for sample in TIMIT_test:
 
 TIMIT_test_phones_df = pd.concat(TIMIT_test_phones_df)
 
-
-
-
-
 # %% All the information in one dataSet
 # Idea: make a DF of all the WORDS and add columns with important information
 
@@ -112,9 +96,6 @@ for sample in TIMIT_test:
     TIMIT_test_words_df.append(dataframe)
 
 TIMIT_test_words_df = pd.concat(TIMIT_test_words_df)
-
-
-
 
 
 # %%

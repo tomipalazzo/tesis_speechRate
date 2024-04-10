@@ -87,6 +87,10 @@ def speed_by_phone(sample, SR=16000):
     
     speed_of_phone = 1 /(phone_interval / SR)
     print(speed_of_phone)
+
+    
+
+
     i = 0
     for j in range(start[0], stop[-1]):
         i_am_in_the_border = j >= stop[i]
