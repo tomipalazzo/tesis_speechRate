@@ -118,4 +118,3 @@ def aux(x):
     return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
 
 #%%
-

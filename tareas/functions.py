@@ -87,6 +87,10 @@ def speed_by_phone(sample, SR=16000):
     
     speed_of_phone = 1 /(phone_interval / SR)
     print(speed_of_phone)
+    
+    for i in range(len(phones)):
+        if phones[i] == 'pau':
+            speed_of_phone[i] = 0
 
     
 
