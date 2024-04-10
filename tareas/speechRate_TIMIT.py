@@ -1,11 +1,13 @@
-#%%
+#%% Importing libraries
 import pandas as pd
 import matplotlib.pyplot as plt
 import soundfile as sf
 import IPython.display as ipd
 import numpy as np
+import statsmodels.api as sm
 import random
 from datasets import load_dataset
+
 
 #%%
 # Load the TIMIT dataset from a specific directory
@@ -13,24 +15,24 @@ TIMIT = load_dataset('timit_asr', data_dir='/home/tomi/Documents/tesis_speechRat
 TIMIT_train = TIMIT['train']
 TIMIT_test = TIMIT['test']
 
-#%%
-# Local variables
+#%% Global variables
 SR = 16000
+SAMPLE = TIMIT_train[500]
 
 #%%
 # Select a sample from the training set
-sample = TIMIT_train[5]
+
 
 # Access the audio data and sample rate
-audio_data = sample['audio']['array']
-sample_rate = sample['audio']['sampling_rate']
+audio_data = SAMPLE['audio']['array']
+sample_rate = SAMPLE['audio']['sampling_rate']
 
 # Play the audio
 ipd.Audio(audio_data, rate=sample_rate)
 
 #%%
 # Print the phones
-phones = sample['phonetic_detail']
+phones = SAMPLE['phonetic_detail']
 print(phones)
 
 #%%
@@ -44,48 +46,44 @@ for i in range(TIMIT_train.num_rows):
         DIFFERENTS_SAMP_RATE.append(sample['audio']['sampling_rate'])
         ALL_EQUAL_SAMPLING_RATE = False
 
-print(ALL_EQUAL_SAMPLING_RATE)
+if(ALL_EQUAL_SAMPLING_RATE): 
+    show = 'All the samples has the same sampling rate (16000 per second)'
+else:
+    show = 'There are different sampling rates in the dataset'
+print(show)
+
+#%% Show words duration
+
+def show_words_duration(sample):
+    words = sample['word_detail']['utterance']
+    start = sample['word_detail']['start']
+    stop = sample['word_detail']['stop']
+
+    words.insert(0, 'silence')
+    stop.insert(0, start[0])
+    time_of_word = []
+
+    i = 0
+    for j in range(stop[-1]):
+        i_am_in_the_border = j >= stop[i]
+        if i_am_in_the_border:
+            i += 1
+        time_of_word.append(words[i])
+
+    # Plot using frequency as the x-axis
+    time = np.arange(stop[-1]) / SR
+    plt.plot(time, time_of_word)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Words')
+    plt.title('Word Duration in Time Domain')
+    plt.show()
 
 #%%
-# Plot the duration of each word for one sample
-sample = TIMIT_train[0]
-words = sample['word_detail']['utterance']
-start = sample['word_detail']['start']
-stop = sample['word_detail']['stop']
-words.insert(0, 'silence')
-stop.insert(0, start[0])
-time_of_word = []
-
-i = 0
-for j in range(stop[-1]):
-    i_am_in_the_border = j >= stop[i]
-    if i_am_in_the_border:
-        i += 1
-    time_of_word.append(words[i])
-
-#%%
-# Plot using frequency as the x-axis
-freq = np.arange(stop[-1])
-plt.plot(freq, time_of_word)
-plt.xlabel('Sample')
-plt.ylabel('Words')
-plt.title('Word Duration in Sample Domain')
-plt.show()
-
-#%%
-# Plot using time as the x-axis
-time = np.arange(stop[-1]) / SR
-plt.plot(time, time_of_word)
-plt.xlabel('Time (s)')
-plt.ylabel('Words')
-plt.title('Word Duration in Time Domain')
-plt.show()
+show_words_duration(sample=SAMPLE)
 
 # %%
 
 def speed_by_word(sample, SR=16000):
-
-    sample = TIMIT_train[0]
     words = sample['word_detail']['utterance']
     start = sample['word_detail']['start']
     stop = sample['word_detail']['stop']
@@ -122,7 +120,6 @@ def speed_by_word(sample, SR=16000):
 # %%
 def speed_by_phone(sample, SR=16000):
 
-    sample = TIMIT_train[0]
     phones = sample['phonetic_detail']['utterance']
     start = sample['phonetic_detail']['start']
     stop = sample['phonetic_detail']['stop']
@@ -157,54 +154,44 @@ def speed_by_phone(sample, SR=16000):
 
 #%%
 
-X, y = speed_by_word(sample=sample)
+X, y = speed_by_phone(sample=SAMPLE)
 X.shape[0]
 # %%
-speed_by_phone(sample=sample)
+speed_by_phone(sample=SAMPLE)
 
 
 #%% SPEED REGRESSION
+def speed_smoothed_regression(X, y, bandwidth=0.1):
+    
+    # if data is large, subsample
+    max_length = 10000
+    if(len(X) > max_length):
+        id = np.arange(0,X.shape[0],10)
+        X = X[id]
+        y = y[id]
+
+    # Add a constant to X for the regression model
+    X = sm.add_constant(X)
+    y = sm.add_constant(y)
+
+    # Fit the Nadaraya-Watson kernel regression model with the specified bandwidth
+    model = sm.nonparametric.KernelReg(endog=y[:,1], exog=X[:, 1], var_type='c', reg_type='lc', bw=[bandwidth])
+    y_pred, y_std = model.fit(X[:, 1])
 
 
 
-
+    # Plot the data and the regression line
+    plt.figure(figsize=(10, 6))
+    plt.scatter(X[:, 1], y[:,1], alpha=0.5, label='Data')
+    plt.plot(X[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
+    plt.xlabel('X')
+    plt.ylabel('y')
+    plt.title('Nonparametric Regression with Specified Bandwidth')
+    plt.legend()
+    plt.show()
 
 #%%
-
-import numpy as np
-import statsmodels.api as sm
-import matplotlib.pyplot as plt
-
-# Generate sample data
-id = np.arange(0,X.shape[0],10)
-
-
-X_sample = X[id]
-y_sample = y[id]
-
-# Add a constant to X for the regression model
-X_sample = sm.add_constant(X_sample)
-y_sample = sm.add_constant(y_sample)
-
-
-#%%
-# Fit the Nadaraya-Watson kernel regression model with the specified bandwidth
-model = sm.nonparametric.KernelReg(endog=y_sample[:,1], exog=X_sample[:, 1], var_type='c', reg_type='lc', bw=[bandwidth])
-y_pred, y_std = model.fit(X_sample[:, 1])
-
-
-
-# Plot the data and the regression line
-plt.figure(figsize=(10, 6))
-plt.scatter(X_sample[:, 1], y_sample[:,1], alpha=0.5, label='Data')
-plt.plot(X_sample[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
-plt.xlabel('X')
-plt.ylabel('y')
-plt.title('Nonparametric Regression with Specified Bandwidth')
-plt.legend()
-plt.show()
-
-
+speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
 # %% All the information in one dataSet
 # Idea: make a DF of all the PHONES and add columns with important information
 
