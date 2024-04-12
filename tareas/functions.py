@@ -70,6 +70,30 @@ def speed_by_word(sample, SR=16000):
 
     return time, time_of_word
 
+
+def mean_speed_by(sample, SR=16000, phone=True):
+    if phone:
+        data = sample['phonetic_detail']['utterance']
+        start = sample['phonetic_detail']['start']
+        stop = sample['phonetic_detail']['stop']
+    else:
+        data = sample['word_detail']['utterance']
+        start = sample['word_detail']['start']
+        stop = sample['word_detail']['stop']
+
+    time_of_data = np.zeros(stop[-1])
+    data_interval = np.zeros(len(data))
+    speed_of_data = np.zeros(len(data))
+    amount_of_time = stop[-1]
+
+    for i in range(len(data)):
+        data_interval[i] = stop[i] - start[i]
+    
+    speed_of_data = 1 /(data_interval / SR)
+    mean_speed = np.mean(speed_of_data)
+    return mean_speed
+
+
 def speed_by_phone(sample, SR=16000):
 
     phones = sample['phonetic_detail']['utterance']
@@ -142,4 +166,29 @@ def speed_smoothed_regression(X, y, bandwidth=0.1):
     plt.title('Nonparametric Regression with Specified Bandwidth')
     plt.legend()
     plt.show()
+# %% AUX functions
+
+# It ignores the h# phones
+def duration(x):
+    return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
+
+def mean_speed(x):
+    data = x['utterance']
+    start = x['start']
+    stop = x['stop']
+
+    data_interval = np.zeros(len(data))
+    speed_of_data = np.zeros(len(data))
+
+    for i in range(len(data)):
+        data_interval[i] = stop[i] - start[i]
+    
+    speed_of_data = 1 /(data_interval / SR)
+
+    if(data[0] == 'pau'):
+        speed_of_data[0] = 0
+
+    mean_speed = np.mean(speed_of_data)
+    return mean_speed
+
 # %%

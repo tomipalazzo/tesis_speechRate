@@ -82,7 +82,7 @@ for sample in TIMIT_test:
 TIMIT_test_phones_df = pd.concat(TIMIT_test_phones_df)
 
 # %% All the information in one dataSet
-# Idea: make a DF of all the WORDS and add columns with important information
+# Idea: make a DF of all the utterances add columns with important information
 
 TIMIT_test_words_df = []
 for sample in TIMIT_test:
@@ -100,19 +100,18 @@ TIMIT_test_words_df = pd.concat(TIMIT_test_words_df)
 
 # %%
 TIMIT_test_phones_df.head()
-# %%
+# %% 
 TIMIT_test_phones_df.groupby("sample_id")["duration_s"].sum()
 
-# %%
-# for k,g in 
-
-def aux(x):
-    return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
-
+# %% Make a DF with the information of the samples
 TIMIT_test_df_samples = pd.DataFrame()
-TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_phones_df.groupby("sample_id").apply(fn)
-# %%
+TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_phones_df.groupby("sample_id").apply(duration)
+TIMIT_test_df_samples["mean_speed"]=TIMIT_test_phones_df.groupby("sample_id").apply(mean_speed)
 
+# %%
+TIMIT_test_df_samples.head()
+
+#%%
 
 def aux(x):
     return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
