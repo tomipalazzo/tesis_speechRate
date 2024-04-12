@@ -168,7 +168,7 @@ def speed_smoothed_regression(X, y, bandwidth=0.1):
     plt.show()
 # %% AUX functions
 
-# It ignores the h# phones
+# It ignores the h# phones  
 def duration(x):
     return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
 
