@@ -10,7 +10,20 @@ from datasets import load_dataset
 
 #%% 
 
+SR = 16000
+
 def show_words_duration(sample, SR=16000):
+
+    '''
+    This function plots the duration of each word in the sample.
+
+    show_words_duration(sample, SR=16000)
+    Parameters: sample - The sample from the TIMIT dataset.
+                SR - The sample rate of the audio.
+    Output: A plot with the duration of each word in the sample.
+    '''
+
+
     words = sample['word_detail']['utterance']
     start = sample['word_detail']['start']
     stop = sample['word_detail']['stop']
@@ -36,6 +49,16 @@ def show_words_duration(sample, SR=16000):
 
 #%%
 def speed_by_word(sample, SR=16000):
+
+    '''
+    This function plots the speed of each word in the sample.
+
+    speed_by_word(sample, SR=16000)
+    Parameters: sample - The sample from the TIMIT dataset.
+                SR - The sample rate of the audio.
+    Output: A plot with the speed of each word in the sample.
+    '''
+
     words = sample['word_detail']['utterance']
     start = sample['word_detail']['start']
     stop = sample['word_detail']['stop']
@@ -72,6 +95,20 @@ def speed_by_word(sample, SR=16000):
 
 
 def mean_speed_by(sample, SR=16000, phone=True):
+
+    '''
+    This function calculates the mean speed of the sample.
+
+    mean_speed_by(sample, SR=16000, phone=True)
+
+    Parameters: sample - The sample from the TIMIT dataset.
+                SR - The sample rate of the audio.
+                phone - If True, the function calculates the speed by phone. If False, the function calculates the speed by word.
+    Output: The mean speed of the sample.
+
+    '''
+
+
     if phone:
         data = sample['phonetic_detail']['utterance']
         start = sample['phonetic_detail']['start']
@@ -96,6 +133,16 @@ def mean_speed_by(sample, SR=16000, phone=True):
 
 def speed_by_phone(sample, SR=16000):
 
+    '''
+    This function plots the speed of each phone in the sample.
+    
+    speed_by_phow(sample, SR=16000)
+
+    Parameters: sample - The sample from the TIMIT dataset.
+                SR - The sample rate of the audio.
+    Output: A plot with the speed of each phone in the sample.
+    '''
+
     phones = sample['phonetic_detail']['utterance']
     start = sample['phonetic_detail']['start']
     stop = sample['phonetic_detail']['stop']
@@ -115,9 +162,6 @@ def speed_by_phone(sample, SR=16000):
     for i in range(len(phones)):
         if phones[i] == 'pau':
             speed_of_phone[i] = 0
-
-    
-
 
     i = 0
     for j in range(start[0], stop[-1]):
@@ -140,6 +184,18 @@ def speed_by_phone(sample, SR=16000):
 
 def speed_smoothed_regression(X, y, bandwidth=0.1):
     
+    '''
+    This function plots the speed using a smoothed regression..
+
+    speed_smoothed_regression(X, y, bandwidth=0.1)
+    Parameters: X - The data.
+                y - The target.
+                bandwidth - The bandwidth of the regression.
+    Output: A plot with the speed using a smoothed regression.
+
+    '''
+
+
     # if data is large, subsample
     max_length = 10000
     if(len(X) > max_length):
@@ -169,10 +225,13 @@ def speed_smoothed_regression(X, y, bandwidth=0.1):
 # %% AUX functions
 
 # It ignores the h# phones  
-def duration(x):
+def duration(x, DF=16000):
     return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
 
+# phones: pau = epi = h# = 0
 def mean_speed(x):
+
+    silence = ['pau', 'epi', 'h#']
     data = x['utterance']
     start = x['start']
     stop = x['stop']
@@ -185,15 +244,31 @@ def mean_speed(x):
     
     speed_of_data = 1 /(data_interval / SR)
 
-    if(data[0] == 'pau'):
-        speed_of_data[0] = 0
+    
+    for i in range(len(data)):
+
+        if(data in silence):
+            speed_of_data[i] = 0
 
     mean_speed = np.mean(speed_of_data)
-    return mean_speed
+    return speed_of_data, mean_speed
 
 # %%
 
 class TIMIT_df_by_record:
+
+    '''
+    This class builds a dataframe with the information of the samples in the TIMIT dataset.
+
+    Atributes: phone_train - A list with the information of the phones in the training set.
+                phone_test - A list with the information of the phones in the test set.
+                word_train - A list with the information of the words in the training set.
+                word_test - A list with the information of the words in the test set.
+    Methods: build_phone_test - Builds the phone_test list.
+            build_phone_train - Builds the phone_train list.
+            build_word_test - Builds the word_test list.
+            build_word_train - Builds the word_train list.
+    '''
     def __init__(self):
         self.phone_train = []
         self.phone_test = []

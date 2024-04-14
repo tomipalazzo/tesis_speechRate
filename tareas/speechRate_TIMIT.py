@@ -8,6 +8,8 @@ import statsmodels.api as sm
 import random
 import functions as fn
 from datasets import load_dataset
+import time
+
 
 
 #%%
@@ -55,60 +57,32 @@ print(show)
 #%% Show words duration
 fn.show_words_duration(sample=SAMPLE, SR=SR)
 
-#%% SPEED BY WORD
-
+#%% SPEED BY phone
 X, y = fn.speed_by_phone(sample=SAMPLE)
-X.shape[0]
-# %% SPEED BY PHONE
-fn.speed_by_phone(sample=SAMPLE)
 
 
 #%% SPEED REGRESSION
 fn.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
-# %% All the information in one dataSet
-# Idea: make a DF of all the PHONES and add columns with important information
-
-
-
-
 
 
 #%% Test the class TIMIT_phones_df
+
+t0 = time.time()
 TIMIT_phones_df = TIMIT_df_by_record()   
 TIMIT_phones_df.build_phone_test(TIMIT_test)
+TIMIT_phones_df.build_phone_train(TIMIT_train)
+TIMIT_phones_df.build_word_test(TIMIT_test)
+TIMIT_phones_df.build_word_train(TIMIT_train)
+t1 = time.time()
+print('Time: ', t1-t0)
 
-#%%
-TIMIT_phones_df.phone_test
-#%%
+#%% Print the first 5 rows of the test set
+TIMIT_phones_df.phone_test.head()
 
-TIMIT_test_phones_df = []
-for sample in TIMIT_test:
-    sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
-    dataframe = pd.DataFrame(sample['phonetic_detail'])
-    dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
-    dataframe["phone_rate"] = 1/dataframe["duration_s"] 
-    dataframe['sample_id'] = sample_id
-    
 
-    TIMIT_test_phones_df.append(dataframe)
+#%% Test 
 
-TIMIT_test_phones_df = pd.concat(TIMIT_test_phones_df)
 
-# %% All the information in one dataSet
-# Idea: make a DF of all the utterances add columns with important information
-
-TIMIT_test_words_df = []
-for sample in TIMIT_test:
-    sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
-    dataframe = pd.DataFrame(sample['word_detail'])
-    dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
-    dataframe["phone_rate"] = 1/dataframe["duration_s"] 
-    dataframe['sample_id'] = sample_id
-    
-
-    TIMIT_test_words_df.append(dataframe)
-
-TIMIT_test_words_df = pd.concat(TIMIT_test_words_df)
 
 
 # %%
@@ -118,15 +92,11 @@ TIMIT_test_phones_df.groupby("sample_id")["duration_s"].sum()
 
 # %% Make a DF with the information of the samples
 TIMIT_test_df_samples = pd.DataFrame()
-TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_phones_df.groupby("sample_id").apply(duration)
-TIMIT_test_df_samples["mean_speed"]=TIMIT_test_phones_df.groupby("sample_id").apply(mean_speed)
+TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_phones_df.groupby("sample_id").apply(duration) # Without begin/end marker
+TIMIT_test_df_samples["mean_speed"]=TIMIT_test_phones_df.groupby("sample_id").apply(mean_speed) # pau = epi = h# = 0
 
 # %%
 TIMIT_test_df_samples.head()
 
 #%%
-
-def aux(x):
-    return (x.iloc[-1]["start"]-x.iloc[1]["start"])/SR
-
 #%%
