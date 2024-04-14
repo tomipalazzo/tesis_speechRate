@@ -192,3 +192,55 @@ def mean_speed(x):
     return mean_speed
 
 # %%
+
+class TIMIT_df_by_record:
+    def __init__(self):
+        self.phone_train = []
+        self.phone_test = []
+        self.word_train = []
+        self.word_test = []
+    
+
+    def build_phone_test(self, TIMIT_test):
+        for sample in TIMIT_test:
+            sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
+            dataframe = pd.DataFrame(sample['phonetic_detail'])
+            dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
+            dataframe["phone_rate"] = 1/dataframe["duration_s"] 
+            dataframe['sample_id'] = sample_id
+            self.phone_test.append(dataframe)
+    
+        self.phone_test = pd.concat(self.phone_test)
+
+
+    def build_phone_train(self, TIMIT_train):
+        for sample in TIMIT_train:
+            sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
+            dataframe = pd.DataFrame(sample['phonetic_detail'])
+            dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
+            dataframe["phone_rate"] = 1/dataframe["duration_s"] 
+            dataframe['sample_id'] = sample_id
+            self.phone_train.append(dataframe)
+        self.phone_train = pd.concat(self.phone_train)
+    
+    def build_word_test(self, TIMIT_test):
+        for sample in TIMIT_test:
+            sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
+            dataframe = pd.DataFrame(sample['word_detail'])
+            dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
+            dataframe["phone_rate"] = 1/dataframe["duration_s"] 
+            dataframe['sample_id'] = sample_id
+            self.word_test.append(dataframe)
+    
+        self.word_test = pd.concat(self.word_test)
+    
+    def build_word_train(self, TIMIT_train):
+        for sample in TIMIT_train:
+            sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
+            dataframe = pd.DataFrame(sample['word_detail'])
+            dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
+            dataframe["phone_rate"] = 1/dataframe["duration_s"] 
+            dataframe['sample_id'] = sample_id
+            self.word_train.append(dataframe)
+        self.word_train = pd.concat(self.word_train)
+        

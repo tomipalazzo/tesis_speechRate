@@ -68,6 +68,19 @@ fn.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
 # %% All the information in one dataSet
 # Idea: make a DF of all the PHONES and add columns with important information
 
+
+
+
+
+
+#%% Test the class TIMIT_phones_df
+TIMIT_phones_df = TIMIT_df_by_record()   
+TIMIT_phones_df.build_phone_test(TIMIT_test)
+
+#%%
+TIMIT_phones_df.phone_test
+#%%
+
 TIMIT_test_phones_df = []
 for sample in TIMIT_test:
     sample_id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
