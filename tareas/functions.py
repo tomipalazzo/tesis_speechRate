@@ -283,8 +283,9 @@ class TIMIT_df_by_record:
             dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
             dataframe["phone_rate"] = 1/dataframe["duration_s"] 
             
-            # If phone i == h# then phone_rate = 0
-            # dataframe['phone_rate'] = dataframe['phone_rate'].where(dataframe['utterance'] != 'h#', 0)
+            # If phone[i] in silence then phone_rate = 0
+            silence = ['h#', 'pau', 'epi']
+            dataframe['phone_rate'] = dataframe['phone_rate'].where(~dataframe['utterance'].isin(silence), 0)
 
 
             
@@ -300,6 +301,13 @@ class TIMIT_df_by_record:
             dataframe = pd.DataFrame(sample['phonetic_detail'])
             dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
             dataframe["phone_rate"] = 1/dataframe["duration_s"] 
+
+            # If phone[i] in silence then phone_rate = 0
+
+            silence = ['h#', 'pau', 'epi']
+            dataframe['phone_rate'] = dataframe['phone_rate'].where(~dataframe['utterance'].isin(silence), 0)
+
+
             dataframe['sample_id'] = sample_id
             self.phone_train.append(dataframe)
         self.phone_train = pd.concat(self.phone_train)

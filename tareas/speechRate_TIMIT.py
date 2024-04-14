@@ -20,7 +20,7 @@ TIMIT_test = TIMIT['test']
 
 #%% Global variables
 SR = 16000
-SAMPLE = TIMIT_train[500]
+SAMPLE = TIMIT_train[0]
 
 
 #%% Show the sample
@@ -80,7 +80,7 @@ print('Time: ', t1-t0)
 TIMIT_phones_df.phone_test.head()
 
 # %%
-TIMIT_test_phones_df.head()
+TIMIT_phones_df.phone_test[TIMIT_phones_df.phone_test['phone_rate'] == 0]
 # %% 
 TIMIT_test_phones_df.groupby("sample_id")["duration_s"].sum()
 
@@ -96,3 +96,28 @@ TIMIT_test_df_samples.head()
 
 #%%
 #%%
+sample1 = TIMIT_phones_df.phone_test[TIMIT_phones_df.phone_test['sample_id'] == 'DR1_AKS0_SA1']
+
+#%%
+size = sample1['stop'][len(sample1)-1]
+time1 = np.zeros(size)
+phone_rate_axis = np.zeros(size)
+
+j=0
+for i in range(size):
+    border = sample1['stop'][j]
+    if i >= border:
+        j+=1
+    
+    time1[i] = i/SR
+    phone_rate_axis[i] = sample1['phone_rate'][j]
+
+
+plt.plot(time1, phone_rate_axis)
+     
+
+#plt.scatter()
+# %%
+fn.speed_smoothed_regression(X=time1, y=phone_rate_axis, bandwidth=0.01)
+
+# %%
