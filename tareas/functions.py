@@ -247,7 +247,7 @@ def mean_speed(x):
     
     for i in range(len(data)):
 
-        if(data in silence):
+        if(data[i] in silence):
             speed_of_data[i] = 0
 
     mean_speed = np.mean(speed_of_data)
