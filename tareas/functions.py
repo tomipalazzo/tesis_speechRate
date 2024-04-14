@@ -251,7 +251,7 @@ def mean_speed(x):
             speed_of_data[i] = 0
 
     mean_speed = np.mean(speed_of_data)
-    return speed_of_data, mean_speed
+    return mean_speed
 
 # %%
 
@@ -282,6 +282,12 @@ class TIMIT_df_by_record:
             dataframe = pd.DataFrame(sample['phonetic_detail'])
             dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
             dataframe["phone_rate"] = 1/dataframe["duration_s"] 
+            
+            # If phone i == h# then phone_rate = 0
+            # dataframe['phone_rate'] = dataframe['phone_rate'].where(dataframe['utterance'] != 'h#', 0)
+
+
+            
             dataframe['sample_id'] = sample_id
             self.phone_test.append(dataframe)
     
@@ -319,3 +325,4 @@ class TIMIT_df_by_record:
             self.word_train.append(dataframe)
         self.word_train = pd.concat(self.word_train)
         
+# %%

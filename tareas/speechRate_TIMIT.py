@@ -79,12 +79,6 @@ print('Time: ', t1-t0)
 #%% Print the first 5 rows of the test set
 TIMIT_phones_df.phone_test.head()
 
-
-#%% Test 
-
-
-
-
 # %%
 TIMIT_test_phones_df.head()
 # %% 
@@ -94,6 +88,8 @@ TIMIT_test_phones_df.groupby("sample_id")["duration_s"].sum()
 TIMIT_test_df_samples = pd.DataFrame()
 TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_phones_df.groupby("sample_id").apply(duration) # Without begin/end marker
 TIMIT_test_df_samples["mean_speed"]=TIMIT_test_phones_df.groupby("sample_id").apply(mean_speed) # pau = epi = h# = 0
+
+
 
 # %%
 TIMIT_test_df_samples.head()
