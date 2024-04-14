@@ -182,7 +182,7 @@ def speed_by_phone(sample, SR=16000):
 
 #%%
 
-def speed_smoothed_regression(X, y, bandwidth=0.1):
+def speed_smoothed_regression(X, y, bandwidth=0.1, mean_speed=0):
     
     '''
     This function plots the speed using a smoothed regression..
@@ -212,11 +212,15 @@ def speed_smoothed_regression(X, y, bandwidth=0.1):
     y_pred, y_std = model.fit(X[:, 1])
 
 
-
     # Plot the data and the regression line
     plt.figure(figsize=(10, 6))
     plt.scatter(X[:, 1], y[:,1], alpha=0.5, label='Data')
     plt.plot(X[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
+
+    if mean_speed != 0:
+        plt.axhline(y = 0.5, color = 'r', linestyle = '-') 
+
+
     plt.xlabel('X')
     plt.ylabel('y')
     plt.title('Nonparametric Regression with Specified Bandwidth')

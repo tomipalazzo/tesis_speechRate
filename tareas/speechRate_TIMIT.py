@@ -66,28 +66,30 @@ fn.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
 
 
 #%% Test the class TIMIT_phones_df
+from functions import TIMIT_df_by_record
 
 t0 = time.time()
-TIMIT_phones_df = TIMIT_df_by_record()   
-TIMIT_phones_df.build_phone_test(TIMIT_test)
-TIMIT_phones_df.build_phone_train(TIMIT_train)
-TIMIT_phones_df.build_word_test(TIMIT_test)
-TIMIT_phones_df.build_word_train(TIMIT_train)
+TIMIT_df = TIMIT_df_by_record()   
+TIMIT_df.build_phone_test(TIMIT_test)
+TIMIT_df.build_phone_train(TIMIT_train)
+TIMIT_df.build_word_test(TIMIT_test)
+TIMIT_df.build_word_train(TIMIT_train)
 t1 = time.time()
 print('Time: ', t1-t0)
 
 #%% Print the first 5 rows of the test set
-TIMIT_phones_df.phone_test.head()
+TIMIT_df.phone_test.head()
 
 # %%
-TIMIT_phones_df.phone_test[TIMIT_phones_df.phone_test['phone_rate'] == 0]
+TIMIT_df.phone_test[TIMIT_df.phone_test['phone_rate'] == 0]
 # %% 
-TIMIT_test_phones_df.groupby("sample_id")["duration_s"].sum()
+TIMIT_df.phone_test.groupby("sample_id")["duration_s"].sum()
 
 # %% Make a DF with the information of the samples
+# import functions as fn
 TIMIT_test_df_samples = pd.DataFrame()
-TIMIT_test_df_samples["duration_wpau"]=TIMIT_test_phones_df.groupby("sample_id").apply(duration) # Without begin/end marker
-TIMIT_test_df_samples["mean_speed"]=TIMIT_test_phones_df.groupby("sample_id").apply(mean_speed) # pau = epi = h# = 0
+TIMIT_test_df_samples["duration_wpau"]=TIMIT_df.phone_test.groupby("sample_id").apply(fn.duration) # Without begin/end marker
+TIMIT_test_df_samples["mean_speed"]=TIMIT_df.phone_test.groupby("sample_id").apply(fn.mean_speed) # pau = epi = h# = 0
 
 
 
@@ -117,7 +119,7 @@ plt.plot(time1, phone_rate_axis)
      
 
 #plt.scatter()
-# %%
-fn.speed_smoothed_regression(X=time1, y=phone_rate_axis, bandwidth=0.01)
+# %% Instantaneous speed vs mean speed
+fn.speed_smoothed_regression(X=time1, y=phone_rate_axis, bandwidth=0.01, mean_speed =  TIMIT_test_df_samples['mean_speed'][0])
 
 # %%
