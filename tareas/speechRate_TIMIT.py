@@ -6,7 +6,7 @@ import IPython.display as ipd
 import numpy as np
 import statsmodels.api as sm
 import random
-import functions as fn
+import utils as ut
 from datasets import load_dataset
 import time
 
@@ -55,14 +55,14 @@ print(show)
 
 
 #%% Show words duration
-fn.show_words_duration(sample=SAMPLE, SR=SR)
+ut.show_words_duration(sample=SAMPLE, SR=SR)
 
 #%% SPEED BY phone
-X, y = fn.speed_by_phone(sample=SAMPLE)
+X, y = ut.speed_by_phone(sample=SAMPLE)
 
 
 #%% SPEED REGRESSION
-fn.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
+ut.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
 
 
 #%% Test the class TIMIT_phones_df
@@ -86,19 +86,15 @@ TIMIT_df.phone_test[TIMIT_df.phone_test['phone_rate'] == 0]
 TIMIT_df.phone_test.groupby("sample_id")["duration_s"].sum()
 
 # %% Make a DF with the information of the samples
-# import functions as fn
-TIMIT_test_df_samples = pd.DataFrame()
-TIMIT_test_df_samples["duration_wpau"]=TIMIT_df.phone_test.groupby("sample_id").apply(fn.duration) # Without begin/end marker
-TIMIT_test_df_samples["mean_speed"]=TIMIT_df.phone_test.groupby("sample_id").apply(fn.mean_speed) # pau = epi = h# = 0
 
-
+df_bySample_train = TIMIT
 
 # %%
 TIMIT_test_df_samples.head()
 
 #%%
 #%%
-sample1 = TIMIT_phones_df.phone_test[TIMIT_phones_df.phone_test['sample_id'] == 'DR1_AKS0_SA1']
+sample1 = TIMIT_df.phone_train[TIMIT_df.phone_train['sample_id'] == 'DR1_CJF0_SA1']
 
 #%%
 size = sample1['stop'][len(sample1)-1]
@@ -120,6 +116,6 @@ plt.plot(time1, phone_rate_axis)
 
 #plt.scatter()
 # %% Instantaneous speed vs mean speed
-fn.speed_smoothed_regression(X=time1, y=phone_rate_axis, bandwidth=0.01, mean_speed =  TIMIT_test_df_samples['mean_speed'][0])
+ut.speed_smoothed_regression(X=time1, y=phone_rate_axis, bandwidth=0.01, mean_speed =  TIMIT_test_df_samples['mean_speed'][0])
 
 # %%

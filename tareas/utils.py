@@ -337,4 +337,10 @@ class TIMIT_df_by_record:
             self.word_train.append(dataframe)
         self.word_train = pd.concat(self.word_train)
         
+
 # %%
+def TIMIT_df_by_sample(TIMIT_df, df_by_record):
+    TIMIT_df_samples = pd.DataFrame()
+    TIMIT_df_samples["duration_wpau"] = df_by_record.groupby("sample_id").apply(duration)
+    TIMIT_df_samples["mean_speed"] = df_by_record.groupby("sample_id").apply(mean_speed)
+    return TIMIT_df_samples
