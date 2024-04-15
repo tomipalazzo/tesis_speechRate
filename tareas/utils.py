@@ -218,7 +218,7 @@ def speed_smoothed_regression(X, y, bandwidth=0.1, mean_speed=0):
     plt.plot(X[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
 
     if mean_speed != 0:
-        plt.axhline(y = 0.5, color = 'r', linestyle = '-') 
+        plt.axhline(y=mean_speed, color = 'r', linestyle = 'dashed', label = 'Mean Speed') 
 
 
     plt.xlabel('X')
@@ -339,8 +339,9 @@ class TIMIT_df_by_record:
         
 
 # %%
-def TIMIT_df_by_sample(TIMIT_df, df_by_record):
+def TIMIT_df_by_sample(df_by_record):
     TIMIT_df_samples = pd.DataFrame()
     TIMIT_df_samples["duration_wpau"] = df_by_record.groupby("sample_id").apply(duration)
     TIMIT_df_samples["mean_speed"] = df_by_record.groupby("sample_id").apply(mean_speed)
     return TIMIT_df_samples
+# %%
