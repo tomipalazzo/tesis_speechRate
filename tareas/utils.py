@@ -218,8 +218,7 @@ def speed_smoothed_regression(X, y, bandwidth=0.1, mean_speed=0):
     plt.plot(X[:, 1], y_pred, color='red', label='Nadaraya-Watson Kernel Regression')
 
     if mean_speed != 0:
-        plt.axhline(y=mean_speed, color = 'r', linestyle = 'dashed', label = 'Mean Speed') 
-
+        plt.axhline(y=mean_speed, color='r', linestyle='dashed', label='Mean Speed = {}'.format(mean_speed))
 
     plt.xlabel('X')
     plt.ylabel('y')
@@ -236,26 +235,35 @@ def duration(x, DF=16000):
 def mean_speed(x):
 
     silence = ['pau', 'epi', 'h#']
-    data = x['utterance']
-    start = x['start']
-    stop = x['stop']
+    # data = x['utterance']
+    # start = x['start']
+    # stop = x['stop']
 
-    data_interval = np.zeros(len(data))
-    speed_of_data = np.zeros(len(data))
+    # data_interval = np.zeros(len(data))
+    # speed_of_data = np.zeros(len(data))
 
-    for i in range(len(data)):
-        data_interval[i] = stop[i] - start[i]
+    # data_interval = stop - start
     
-    speed_of_data = 1 /(data_interval / SR)
+    # speed_of_data = 1 /(data_interval / SR)
 
     
-    for i in range(len(data)):
+    # for i in range(len(data)):
 
-        if(data[i] in silence):
-            speed_of_data[i] = 0
+    #     if(data[i] in silence):
+    #         speed_of_data[i] = 0
 
-    mean_speed = np.mean(speed_of_data)
-    return mean_speed
+    # mean_speed = np.mean(speed_of_data)
+
+    # ## NOTA: tiene que devolver 2 valores, el mean_speed y el mean_speed sin los silencios
+
+    avg_dur_wopau = x.loc[~x["utterance"].isin(silence),:]["duration_s"].mean()
+    avg_speed_wopau = 1/avg_dur_wopau
+
+    avg_dur_wpau = x.iloc[1:-1,:]["duration_s"].mean()
+    avg_speed_wpau = 1/avg_dur_wpau
+        
+    return avg_dur_wopau, avg_speed_wopau, avg_dur_wpau, avg_speed_wpau
+
 
 # %%
 
