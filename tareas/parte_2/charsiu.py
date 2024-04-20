@@ -6,14 +6,27 @@ from Charsiu import Wav2Vec2ForFrameClassification, CharsiuPreprocessor_en, char
 import torch 
 import numpy as np
 import matplotlib.pyplot as plt
-# %%
+import IPython.display as ipd
 from datasets import load_dataset
+import pandas as pd
+import random
+
+# %%
 
 TIMIT = load_dataset('timit_asr', data_dir='/home/tomi/Documents/tesis_speechRate/timit')
 TIMIT_train = TIMIT['train']
 TIMIT_test = TIMIT['test']
 
 sample = TIMIT_train[1]# %%
+
+
+#%% Show the sample
+# Access the audio data and sample rate
+audio_data = sample['audio']['array']
+sample_rate = sample['audio']['sampling_rate']
+
+# Play the audio
+ipd.Audio(audio_data, rate=sample_rate)
 
 # %% Magic happens here
 
@@ -58,7 +71,38 @@ plt.colorbar()
 
 # %%
 plt.hist(y[6,:])
+# %% Choose randomly a subset of Train set and Test set
+
+# Add seed for reproducibility
+random.seed(42)
+subset_train = random.sample(range(0, TIMIT_train.num_rows), 5)
+subset_test = random.sample(range(0, TIMIT_test.num_rows), 2)
+
+# %% now make it a function
+def get_phonograms(dataset, model, subset):
+    phonograms = []
+    for i in range(len(subset)):
+        sample = dataset[subset[i]]
+        audio_data = sample['audio']['array']
+        x = torch.tensor(np.array([audio_data]).astype(np.float32))
+        with torch.no_grad():
+            y = model(x).logits
+        y = y.numpy()[0].T
+        phonograms.append(y)
+    return phonograms
 # %%
+phonograms = get_phonograms(TIMIT_train, modelo, subset_train)
+
+#%%
+
+plt.pcolor(phonograms[0])
+
+# %% Save the mean of each phone (y axis)
 
 
+mean_phone = np.mean(phonograms[0], axis=1)
+len(mean_phone)
+# %% summary of one phonogram: max min mean std
+phonograms[0].summary()
+# %%
 # %%
