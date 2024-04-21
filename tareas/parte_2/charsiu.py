@@ -10,6 +10,7 @@ import IPython.display as ipd
 from datasets import load_dataset
 import pandas as pd
 import random
+import librosa
 
 # %%
 
@@ -97,12 +98,43 @@ phonograms = get_phonograms(TIMIT_train, modelo, subset_train)
 
 plt.pcolor(phonograms[0])
 
-# %% Save the mean of each phone (y axis)
+
+#%% Get the delta of the phonograms with Librosa
+def get_delta(phonograms):
+    deltas = []
+    for i in range(len(phonograms)):
+        delta = librosa.feature.delta(phonograms[i])
+        deltas.append(delta)
+    return deltas
+
+deltas = get_delta(phonograms)
+d_deltas = get_delta(deltas)
+#%% 
+plt.pcolor(phonograms[0])
+plt.colorbar()
+
+#%% 
+plt.pcolor(d_deltas[0])
+plt.colorbar()
 
 
-mean_phone = np.mean(phonograms[0], axis=1)
-len(mean_phone)
+
+#%% Create DataFrame with the mean, std,  of each phone
+features = []
+
+for i in range(len(phonograms[0])):
+    features.append({'mean_phonogram': np.mean(phonograms[0][i,:]),
+                                'std_phonogram': np.std(phonograms[0][i,:]),
+                                'mean_delta': np.mean(deltas[0][i,:]),
+                                'std_delta': np.std(deltas[0][i,:]),
+                                'mean_d_delta': np.mean(d_deltas[0][i,:]),
+                                'std_d_delta': np.std(d_deltas[0][i,:])})
+features = pd.DataFrame(features)
+features = pd.DataFrame(features)
+features.head()
+
 # %% summary of one phonogram: max min mean std
-phonograms[0].summary()
+features.describe()
 # %%
+features.shape
 # %%
