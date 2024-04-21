@@ -1,4 +1,9 @@
 
+
+#%% TO DO 
+# 1. use the Datasets os speechRate_TIMIT.py to get the phonograms
+# 2. Add the 2 features that are missing in the phonograms dataframe
+
 #%% Importing libraries
 import sys
 sys.path.insert(0,'../charsiu/src/')

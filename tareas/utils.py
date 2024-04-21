@@ -118,10 +118,8 @@ def mean_speed_by(sample, SR=16000, phone=True):
         start = sample['word_detail']['start']
         stop = sample['word_detail']['stop']
 
-    time_of_data = np.zeros(stop[-1])
     data_interval = np.zeros(len(data))
     speed_of_data = np.zeros(len(data))
-    amount_of_time = stop[-1]
 
     for i in range(len(data)):
         data_interval[i] = stop[i] - start[i]
@@ -259,11 +257,16 @@ def mean_speed(x):
     avg_dur_wopau = x.loc[~x["utterance"].isin(silence),:]["duration_s"].mean()
     avg_speed_wopau = 1/avg_dur_wopau
 
-    avg_dur_wpau = x.iloc[1:-1,:]["duration_s"].mean()
+    avg_dur_wpau = x.iloc[1:-1,:]["duration_s"].mean() # Excluding the h# phones
     avg_speed_wpau = 1/avg_dur_wpau
         
     return avg_dur_wopau, avg_speed_wopau, avg_dur_wpau, avg_speed_wpau
 
+def avg_speed_wopau(x):    
+    return mean_speed(x)[1]
+
+def avg_speed_wpau(x):
+    return mean_speed(x)[3]
 
 # %%
 
@@ -350,6 +353,7 @@ class TIMIT_df_by_record:
 def TIMIT_df_by_sample(df_by_record):
     TIMIT_df_samples = pd.DataFrame()
     TIMIT_df_samples["duration_wpau"] = df_by_record.groupby("sample_id").apply(duration)
-    TIMIT_df_samples["mean_speed"] = df_by_record.groupby("sample_id").apply(mean_speed)
+    TIMIT_df_samples["mean_speed"] = df_by_record.groupby("sample_id").apply(avg_speed_wpau)
+    TIMIT_df_samples["mean_speed_wopau"] = df_by_record.groupby("sample_id").apply(avg_speed_wopau)
     return TIMIT_df_samples
 # %%
