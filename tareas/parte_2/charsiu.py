@@ -1,8 +1,11 @@
 
 
 #%% TO DO 
-# 1. use the Datasets os speechRate_TIMIT.py to get the phonograms
-# 2. Add the 2 features that are missing in the phonograms dataframe
+# 1. Check the values of mean_phonegram
+# 2. use the Datasets os speechRate_TIMIT.py to get the phonograms
+# 3. Add the 2 features that are missing in the phonograms dataframe
+ 
+
 
 #%% Importing libraries
 import sys
@@ -65,14 +68,23 @@ with torch.no_grad():
     # Line 7: Pass the preprocessed audio tensor 'x' through the model to obtain logits.
     # Logits are raw, non-normalized scores outputted by the last layer of a neural network. These need to be passed through a softmax layer to turn them into probabilities if necessary.
     y = modelo(x).logits
+    y_prob = torch.nn.functional.softmax(y, dim=-1)
+
 
 y = y.numpy()[0].T
+y_prob = y_prob.numpy()[0].T
+
 
 #%%
 
 plt.pcolor(y)
 plt.colorbar()
+plt.title('Phonogram')
 
+#%% 
+plt.pcolor(y_prob)
+plt.colorbar()
+plt.title('Phonogram with probabilities')
 
 
 # %%
@@ -102,7 +114,7 @@ phonograms = get_phonograms(TIMIT_train, modelo, subset_train)
 #%%
 
 plt.pcolor(phonograms[0])
-
+plt.colorbar()
 
 #%% Get the delta of the phonograms with Librosa
 def get_delta(phonograms):
