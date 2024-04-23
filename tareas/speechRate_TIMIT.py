@@ -10,8 +10,7 @@ import utils as ut
 from datasets import load_dataset
 import time
 
-#%%
-# Load the TIMIT dataset from a specific directory
+#%% Load the TIMIT dataset from a specific directory
 TIMIT = load_dataset('timit_asr', data_dir='/home/tomi/Documents/tesis_speechRate/timit')
 TIMIT_train = TIMIT['train']
 TIMIT_test = TIMIT['test']
@@ -21,6 +20,7 @@ SR = 16000
 SAMPLE = TIMIT_train[0]
 
 #%% Show the sample
+
 # Access the audio data and sample rate
 audio_data = SAMPLE['audio']['array']
 sample_rate = SAMPLE['audio']['sampling_rate']
@@ -28,13 +28,12 @@ sample_rate = SAMPLE['audio']['sampling_rate']
 # Play the audio
 ipd.Audio(audio_data, rate=sample_rate)
 
-#%%
-# Print the phones
+#%% # Print the phones
 phones = SAMPLE['phonetic_detail']
 print(phones)
 
-#%%
-# Check if all the sampling rates are measured at 16000 Hz
+#%% # Check if all the sampling rates are measured at 16000 Hz
+
 ALL_EQUAL_SAMPLING_RATE = True
 DIFFERENTS_SAMP_RATE = []
 for i in range(TIMIT_train.num_rows):
@@ -51,11 +50,11 @@ else:
 print(show)
 
 
-#%% Show words duration
-ut.show_words_duration(sample=SAMPLE, SR=SR)
+#%% plot words duration
+ut.plot_words_duration(sample=SAMPLE, SR=SR)
 
 #%% SPEED BY phone
-X, y = ut.speed_by_phone(sample=SAMPLE)
+X, y = ut.plot_speed_by_phone(sample=SAMPLE)
 
 #%% SPEED REGRESSION
 ut.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
@@ -63,31 +62,32 @@ ut.speed_smoothed_regression(X=X, y=y, bandwidth=0.01)
 #%% Create the dataframe with the information of each record
 
 t0 = time.time()
-TIMIT_df = ut.TIMIT_df_by_record()   
-TIMIT_df.build_phone_test(TIMIT_test)
-TIMIT_df.build_phone_train(TIMIT_train)
-TIMIT_df.build_word_test(TIMIT_test)
-TIMIT_df.build_word_train(TIMIT_train)
+TIMIT_df_by_record = ut.TIMIT_df_by_record()   
+TIMIT_df_by_record.build_phone_test(TIMIT_test)
+TIMIT_df_by_record.build_phone_train(TIMIT_train)
+TIMIT_df_by_record.build_word_test(TIMIT_test)
+TIMIT_df_by_record.build_word_train(TIMIT_train)
 t1 = time.time()
 print('Time: ', t1-t0)
 
 #%% Print the first 5 rows of the test set
-TIMIT_df.phone_test.head()
+TIMIT_df_by_record.phone_test.head()
 
 # %% Print the first 5 rows of the silence records
-TIMIT_df.phone_test[TIMIT_df.phone_test['phone_rate'] == 0]
+TIMIT_df_by_record.phone_test[TIMIT_df_by_record.phone_test['phone_rate'] == 0]
 # %% 
-TIMIT_df.phone_test.groupby("sample_id")["duration_s"].sum()
+TIMIT_df_by_record.phone_test.groupby("sample_id")["duration_s"].sum()
 
 # %% Make a DF with the information of the samples
 
-df_bySample_train = ut.TIMIT_df_by_sample(TIMIT_df.phone_train)
+TIMIT_df_by_sample_train = ut.TIMIT_df_by_sample(TIMIT_df_by_record.phone_train)
+TIMIT_df_by_sample_test = ut.TIMIT_df_by_sample(TIMIT_df_by_record.phone_test)
 
 # %% Print the first 5 rows of the samples
-df_bySample_train.head()
+TIMIT_df_by_sample_train.head()
 
 #%% Show the distribution of the duration of the samples
-sample1 = TIMIT_df.phone_train[TIMIT_df.phone_train['sample_id'] == 'DR1_CJF0_SA1']
+sample1 = TIMIT_df_by_record.phone_train[TIMIT_df_by_record.phone_train['sample_id'] == 'DR1_CJF0_SA1']
 
 #%% This block try to do a plot of the phone rate of the sample.
 size = sample1['stop'][len(sample1)-1]
@@ -103,7 +103,33 @@ for i in range(phones):
 end = time.time()
 print('Time: ', end-start)
 
+
+
+mean_phone_rate = TIMIT_df_by_sample_train[TIMIT_df_by_sample_train.index == 'DR1_CJF0_SA1']['mean_speed_wpau'].values[0]
+
+
 # %% Instantaneous speed vs mean speed
 ut.speed_smoothed_regression(X=time1, y=phone_rate_axis, bandwidth=0.01, mean_speed=mean_phone_rate)
 
+# %% Now make it a function 
+def plot_mean_speed(sample_id, df_of_records):
+    sample = df_of_records[df_of_records['sample_id'] == sample_id]
+    size = sample['stop'][len(sample)-1]
+    time1 = np.arange(size)/SR
+    phone_rate_axis = np.zeros(size)
+    phones = sample.shape[0]
+
+    start=time.time()
+    for i in range(phones):
+        phone_rate = sample['phone_rate'][i]
+        phone_rate_axis[sample['start'][i]:sample['stop'][i]] = phone_rate
+
+    end = time.time()
+    print('Time: ', end-start)
+
+    # Instantaneous speed vs mean speed
+    ut.speed_smoothed_regression(X=time1, y=phone_rate_axis, bandwidth=0.01, mean_speed=mean_phone_rate)
+
+# %%
+plot_mean_speed('DR1_CJF0_SA1', TIMIT_df_by_record.phone_train)
 # %%

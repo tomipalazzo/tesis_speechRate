@@ -12,12 +12,12 @@ from datasets import load_dataset
 
 SR = 16000
 
-def show_words_duration(sample, SR=16000):
+def plot_words_duration(sample, SR=16000):
 
     '''
     This function plots the duration of each word in the sample.
 
-    show_words_duration(sample, SR=16000)
+    plot_words_duration(sample, SR=16000)
     Parameters: sample - The sample from the TIMIT dataset.
                 SR - The sample rate of the audio.
     Output: A plot with the duration of each word in the sample.
@@ -129,7 +129,7 @@ def mean_speed_by(sample, SR=16000, phone=True):
     return mean_speed
 
 
-def speed_by_phone(sample, SR=16000):
+def plot_speed_by_phone(sample, SR=16000):
 
     '''
     This function plots the speed of each phone in the sample.
@@ -350,10 +350,10 @@ class TIMIT_df_by_record:
         
 
 # %%
-def TIMIT_df_by_sample(df_by_record):
+def TIMIT_df_by_sample_phones(df_by_record_of_phones):
     TIMIT_df_samples = pd.DataFrame()
-    TIMIT_df_samples["duration_wpau"] = df_by_record.groupby("sample_id").apply(duration)
-    TIMIT_df_samples["mean_speed"] = df_by_record.groupby("sample_id").apply(avg_speed_wpau)
-    TIMIT_df_samples["mean_speed_wopau"] = df_by_record.groupby("sample_id").apply(avg_speed_wopau)
+    TIMIT_df_samples["duration_wpau"] = df_by_record_of_phones.groupby("sample_id").apply(duration)
+    TIMIT_df_samples["mean_speed_wpau"] = df_by_record_of_phones.groupby("sample_id").apply(avg_speed_wpau)
+    TIMIT_df_samples["mean_speed_wopau"] = df_by_record_of_phones.groupby("sample_id").apply(avg_speed_wopau)
     return TIMIT_df_samples
 # %%
