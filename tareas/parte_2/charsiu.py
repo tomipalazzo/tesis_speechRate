@@ -1,7 +1,7 @@
 
 
 #%% TO DO 
-# 1. Check the values of mean_phonegram
+# 1. Check the values of mean_phonegram - OK
 # 2. use the Datasets os speechRate_TIMIT.py to get the phonograms
 # 3. Add the 2 features that are missing in the phonograms dataframe
  

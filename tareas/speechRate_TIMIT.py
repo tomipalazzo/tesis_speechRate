@@ -91,22 +91,17 @@ sample1 = TIMIT_df.phone_train[TIMIT_df.phone_train['sample_id'] == 'DR1_CJF0_SA
 
 #%% This block try to do a plot of the phone rate of the sample.
 size = sample1['stop'][len(sample1)-1]
-time1 = np.zeros(size)
+time1 = np.arange(size)/SR
 phone_rate_axis = np.zeros(size)
+phones = sample1.shape[0]
 
-j=0
-for i in range(size):
-    border = sample1['stop'][j]
-    if i >= border:
-        j+=1
-    
-    time1[i] = i/SR
-    phone_rate_axis[i] = sample1['phone_rate'][j]
+start=time.time()
+for i in range(phones):
+    phone_rate = sample1['phone_rate'][i]
+    phone_rate_axis[sample1['start'][i]:sample1['stop'][i]] = phone_rate
 
-mean_phone_rate = np.mean(phone_rate_axis)
-
-plt.plot(time1, phone_rate_axis)
-plt.hlines(mean_phone_rate, 0, time1[-1], colors='r', linestyles='dashed')
+end = time.time()
+print('Time: ', end-start)
 
 # %% Instantaneous speed vs mean speed
 ut.speed_smoothed_regression(X=time1, y=phone_rate_axis, bandwidth=0.01, mean_speed=mean_phone_rate)
