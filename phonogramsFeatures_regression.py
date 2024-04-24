@@ -11,17 +11,33 @@ from datasets import load_dataset
 import pandas as pd
 import random
 import librosa
-import src.tables_speechRate as my_tables
+#import src.tables_speechRate as my_tables
 import src.utils as ut
 import time
+from sklearn import linear_model
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 
+#%% Load the Dataframes of each record
+TIMIT = load_dataset('timit_asr', data_dir='/home/tomi/Documents/tesis_speechRate/timit')
+TIMIT_train = TIMIT['train']
+TIMIT_test = TIMIT['test']
 
+#%%
+
+TIMIT_df_by_record_phone_test = pd.read_csv('TIMIT_df_by_record_phone_test.csv')
+TIMIT_df_by_record_phone_train = pd.read_csv('TIMIT_df_by_record_phone_train.csv')
+TIMIT_df_by_sample_train = pd.read_csv('TIMIT_df_by_sample_train.csv')
+TIMIT_df_by_sample_test = pd.read_csv('TIMIT_df_by_sample_test.csv')
+
+#%%
+TIMIT_df_by_sample_train
 #%% Global Variables
-N_SAMPLES = 50
+N_SAMPLES = 100
 
 #%%
 # Load the dataset
-sample_phone_train = my_tables.TIMIT_df_by_record.phone_train
+sample_phone_train = TIMIT_df_by_record_phone_train
 
 # %%
 sample_phone_train
@@ -46,7 +62,7 @@ modelo.eval()
 procesador = CharsiuPreprocessor_en()
 
 #%% Do a Dataframe with sample_ID and the audio array
-TIMIT_train = my_tables.TIMIT_train
+TIMIT_train = TIMIT_train
 TIMIT_train_df = pd.DataFrame(TIMIT_train)
 #%%
 def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES):
@@ -83,20 +99,7 @@ phonograms_df = pd.DataFrame({'sample_id': sample_id, 'phonogram': phonograms})
 def get_phonogram_features(phonogram, sample_id):
     delta = librosa.feature.delta(phonogram)
     d_delta = librosa.feature.delta(phonogram, order=2)
-    '''
-    for i in range(phonogram.shape[0]):
-        features.append({           'sample_id': sample_id,
-                                    'mean_phonogram': np.mean(phonogram[i,:]),
-                                    'std_phonogram': np.std(phonogram[i,:]),
-                                    'mean_delta': np.mean(delta[i,:]),
-                                    'std_delta': np.std(delta[i,:]),
-                                    'mean_d_delta': np.mean(d_delta[i,:]),
-                                    'std_d_delta': np.std(d_delta[i,:]),
-                                    'abs_mean_phonogram': np.mean(np.abs(phonogram[i,:])),
-                                    'abs_mean_delta': np.mean(np.abs(delta[i,:])),
-                                    'abs_mean_d_delta': np.mean(np.abs(d_delta[i,:]))})
 
-    '''
     for i in range(phonogram.shape[0]):
         dic = {'sample_id': sample_id}
         for j in range(1,42+1): # 42 is the number of phonemes
@@ -127,17 +130,15 @@ phonograms_features_df.set_index('sample_id', inplace=True)
 phonograms_features_df
 #%% 
 
-TIMIT_df_by_sample_train = ut.TIMIT_df_by_sample_phones(my_tables.TIMIT_df_by_record.phone_train)
+TIMIT_df_by_sample_train 
 # %%
-TIMIT_df_by_sample_train
+TIMIT_df_by_sample_train.set_index('sample_id', inplace=True)
 # %%
 df_X = pd.merge(phonograms_features_df, TIMIT_df_by_sample_train, left_index=True, right_index=True)
 # %%
-X = df_X.drop(columns=['mean_speed_wpau', 'mean_speed_wopau'])
+X = df_X.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau'])
 y = df_X['mean_speed_wpau']
-from sklearn import linear_model
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 model = linear_model.LinearRegression()
 model.fit(X_train, y_train)
@@ -145,12 +146,37 @@ y_pred = model.predict(X_test)
 mean_squared_error(y_test, y_pred)
 
 #%%
-y2 = df_X['mean_speed_wopau']
-X_train, X_test, y_train, y_test = train_test_split(X, y2, test_size=0.2)
+y_train_pred = model.predict(X_train)
+mean_squared_error(y_train, y_train_pred)
+# R2 score
+model.score(X_train, y_train)
+model.score(X_test, y_test)
+
+#%% PCA 
+from sklearn.decomposition import PCA
+pca = PCA()
+pca.fit(X_train)
+plt.plot(np.cumsum(pca.explained_variance_ratio_))
+# 95% of the variance
+np.where(np.cumsum(pca.explained_variance_ratio_) < 0.95)
+
+
+pca = PCA(n_components=1)
+X_train_pca = pca.fit_transform(X_train)
+X_test_pca = pca.transform(X_test)
 model = linear_model.LinearRegression()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
+model.fit(X_train_pca, y_train)
+y_pred = model.predict(X_test_pca)
 mean_squared_error(y_test, y_pred)
+model.score(X_test_pca, y_test)
+print(model.score(X_train_pca, y_train)
+)
+plt.figure()
+plt.scatter(X_train_pca, y_train)
 
-
+# %%
+df_X.corr()
+# %%
+import seaborn as sns
+sns.heatmap(df_X.corr())
 # %%

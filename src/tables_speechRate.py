@@ -25,4 +25,14 @@ TIMIT_df_by_sample_test = ut.TIMIT_df_by_sample_phones(TIMIT_df_by_record.phone_
 # %%
 TIMIT_df_by_sample_word_test = ut.TIMIT_df_by_sample_phones(TIMIT_df_by_record.word_test)
 
+# %% Save the dataframes
+TIMIT_df_by_record.phone_test.to_csv('TIMIT_df_by_record_phone_test.csv', index=True)
+TIMIT_df_by_record.phone_train.to_csv('TIMIT_df_by_record_phone_train.csv', index=True)
+TIMIT_df_by_record.word_test.to_csv('TIMIT_df_by_record_word_test.csv', index=True)
+TIMIT_df_by_record.word_train.to_csv('TIMIT_df_by_record_word_train.csv', index=True)
+TIMIT_df_by_sample_train.to_csv('TIMIT_df_by_sample_train.csv', index=True)
+TIMIT_df_by_sample_test.to_csv('TIMIT_df_by_sample_test.csv', index=True)
+
+
+
 # %%
