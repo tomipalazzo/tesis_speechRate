@@ -2,7 +2,7 @@
 
 import sys
 #from charsiu.src import models
-from charsiu.src.Charsiu import CharsiuPreprocessor_en, charsiu_forced_aligner
+from charsiu.src.Charsiu import Wav2Vec2ForFrameClassification, CharsiuPreprocessor_en, charsiu_forced_aligner
 import torch 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +12,12 @@ import pandas as pd
 import random
 import librosa
 import src.tables_speechRate as my_tables
+import src.utils as ut
+import time
+
+
+#%% Global Variables
+N_SAMPLES = 50
 
 #%%
 # Load the dataset
@@ -39,21 +45,112 @@ modelo.eval()
 # before it can be inputted to the model.
 procesador = CharsiuPreprocessor_en()
 
-# Line 5: Convert the audio data from a sample dictionary to a Torch tensor, necessary for processing with PyTorch models.
-# 'np.array([sample['audio']['array']])' converts the audio samples to a NumPy array and wraps it in another array to add a batch dimension.
-# '.astype(np.float32)' ensures that the data type is float32, which is typically required for neural network inputs in PyTorch.
-x = torch.tensor(np.array([sample['audio']['array']]).astype(np.float32))
+#%% Do a Dataframe with sample_ID and the audio array
+TIMIT_train = my_tables.TIMIT_train
+TIMIT_train_df = pd.DataFrame(TIMIT_train)
+#%%
+def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES):
+    t0 = time.time()
+    phonograms = []
+    for i in range(n_samples):
+        sample = TIMIT_set[i]
+        audio_data = sample['audio']['array']
+        x = torch.tensor(np.array([audio_data]).astype(np.float32))
+        with torch.no_grad():
+            y = model(x).logits
+        y = y.numpy()[0].T
+        phonograms.append(y)
+    t1 = time.time()
+    print('Time to get phonograms: ', t1-t0)
+    return phonograms
+# %%
 
-# Line 6: This line is inside a 'with' statement that disables gradient computation.
-# 'torch.no_grad()' is crucial during inference to reduce memory consumption and speed up computations since backpropagation (gradient calculations) is not needed.
-with torch.no_grad():
-    # Line 7: Pass the preprocessed audio tensor 'x' through the model to obtain logits.
-    # Logits are raw, non-normalized scores outputted by the last layer of a neural network. These need to be passed through a softmax layer to turn them into probabilities if necessary.
-    y = modelo(x).logits
-    y_prob = torch.nn.functional.softmax(y, dim=-1)
+# %% Dataframes with the array of the samples (array_id, array)
+sample_id = []
+
+for i in range(N_SAMPLES):
+    sample = TIMIT_train[i]
+    id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
+    sample_id.append(id)
+#%% 
+
+phonograms = get_phonograms(TIMIT_train, modelo)
+
+# %% Dataframe (sample_id, phonogram)
+phonograms_df = pd.DataFrame({'sample_id': sample_id, 'phonogram': phonograms})
+
+# %% Phonogram features
+def get_phonogram_features(phonogram, sample_id):
+    delta = librosa.feature.delta(phonogram)
+    d_delta = librosa.feature.delta(phonogram, order=2)
+    '''
+    for i in range(phonogram.shape[0]):
+        features.append({           'sample_id': sample_id,
+                                    'mean_phonogram': np.mean(phonogram[i,:]),
+                                    'std_phonogram': np.std(phonogram[i,:]),
+                                    'mean_delta': np.mean(delta[i,:]),
+                                    'std_delta': np.std(delta[i,:]),
+                                    'mean_d_delta': np.mean(d_delta[i,:]),
+                                    'std_d_delta': np.std(d_delta[i,:]),
+                                    'abs_mean_phonogram': np.mean(np.abs(phonogram[i,:])),
+                                    'abs_mean_delta': np.mean(np.abs(delta[i,:])),
+                                    'abs_mean_d_delta': np.mean(np.abs(d_delta[i,:]))})
+
+    '''
+    for i in range(phonogram.shape[0]):
+        dic = {'sample_id': sample_id}
+        for j in range(1,42+1): # 42 is the number of phonemes
+            dic['mean_phonogram_' + str(j)] = np.mean(phonogram[i,:])
+            dic['std_phonogram_' + str(j)] = np.std(phonogram[i,:])
+            dic['mean_delta_' + str(j)] = np.mean(delta[i,:])
+            dic['std_delta_' + str(j)] = np.std(delta[i,:])
+            dic['mean_d_delta_' + str(j)] = np.mean(d_delta[i,:])
+            dic['std_d_delta_' + str(j)] = np.std(d_delta[i,:])
+            dic['abs_mean_phonogram_' + str(j)] = np.mean(np.abs(phonogram[i,:]))
+            dic['abs_mean_delta_' + str(j)] = np.mean(np.abs(delta[i,:]))
+            dic['abs_mean_d_delta_' + str(j)] = np.mean(np.abs(d_delta[i,:]))
+
+    features = pd.DataFrame(dic, index=[0])
+    return features  
+    
+
+#%%
+phonograms_features = []
+for i in range(len(phonograms)):
+    phonograms_features.append(get_phonogram_features(phonograms[i], sample_id=sample_id[i]))
+
+# %%
+phonograms_features_df = pd.concat(phonograms_features)
+phonograms_features_df.set_index('sample_id', inplace=True)
+#%%
+
+phonograms_features_df
+#%% 
+
+TIMIT_df_by_sample_train = ut.TIMIT_df_by_sample_phones(my_tables.TIMIT_df_by_record.phone_train)
+# %%
+TIMIT_df_by_sample_train
+# %%
+df_X = pd.merge(phonograms_features_df, TIMIT_df_by_sample_train, left_index=True, right_index=True)
+# %%
+X = df_X.drop(columns=['mean_speed_wpau', 'mean_speed_wopau'])
+y = df_X['mean_speed_wpau']
+from sklearn import linear_model
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+model = linear_model.LinearRegression()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+mean_squared_error(y_test, y_pred)
+
+#%%
+y2 = df_X['mean_speed_wopau']
+X_train, X_test, y_train, y_test = train_test_split(X, y2, test_size=0.2)
+model = linear_model.LinearRegression()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+mean_squared_error(y_test, y_pred)
 
 
-y = y.numpy()[0].T
-y_prob = y_prob.numpy()[0].T
-
-
+# %%

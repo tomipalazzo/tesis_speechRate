@@ -257,7 +257,9 @@ def mean_speed(x):
     avg_dur_wopau = x.loc[~x["utterance"].isin(silence),:]["duration_s"].mean()
     avg_speed_wopau = 1/avg_dur_wopau
 
-    avg_dur_wpau = x.iloc[1:-1,:]["duration_s"].mean() # Excluding the h# phones
+    
+    sum_dur_wopau = x.loc[~x["utterance"].isin(silence),:]["duration_s"].sum() # Excluding the silence
+    avg_dur_wpau = sum_dur_wopau/len(x.iloc[1:-1]) # Excluding the h# at the beginning and the end
     avg_speed_wpau = 1/avg_dur_wpau
         
     return avg_dur_wopau, avg_speed_wopau, avg_dur_wpau, avg_speed_wpau
@@ -297,6 +299,7 @@ class TIMIT_df_by_record:
             dataframe = pd.DataFrame(sample['phonetic_detail'])
             dataframe["duration_s"]=(dataframe["stop"]-dataframe["start"])/SR
             dataframe["phone_rate"] = 1/dataframe["duration_s"] 
+            
             
             # If phone[i] in silence then phone_rate = 0
             silence = ['h#', 'pau', 'epi']
@@ -349,7 +352,9 @@ class TIMIT_df_by_record:
         self.word_train = pd.concat(self.word_train)
         
 
-# %%
+
+#%%
+
 def TIMIT_df_by_sample_phones(df_by_record_of_phones):
     TIMIT_df_samples = pd.DataFrame()
     TIMIT_df_samples["duration_wpau"] = df_by_record_of_phones.groupby("sample_id").apply(duration)
