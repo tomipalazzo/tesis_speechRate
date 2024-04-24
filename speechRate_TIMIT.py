@@ -6,7 +6,7 @@ import IPython.display as ipd
 import numpy as np
 import statsmodels.api as sm
 import random
-import utils as ut
+import src.utils as ut
 from datasets import load_dataset
 import time
 
@@ -80,8 +80,8 @@ TIMIT_df_by_record.phone_test.groupby("sample_id")["duration_s"].sum()
 
 # %% Make a DF with the information of the samples
 
-TIMIT_df_by_sample_train = ut.TIMIT_df_by_sample(TIMIT_df_by_record.phone_train)
-TIMIT_df_by_sample_test = ut.TIMIT_df_by_sample(TIMIT_df_by_record.phone_test)
+TIMIT_df_by_sample_train = ut.TIMIT_df_by_sample_phones(TIMIT_df_by_record.phone_train)
+TIMIT_df_by_sample_test = ut.TIMIT_df_by_sample_phones(TIMIT_df_by_record.phone_test)
 
 # %% Print the first 5 rows of the samples
 TIMIT_df_by_sample_train.head()

@@ -2,15 +2,17 @@
 
 #%% TO DO 
 # 1. Check the values of mean_phonegram - OK
-# 2. use the Datasets os speechRate_TIMIT.py to get the phonograms
+# 2. use the Datasets os tables_speechRate.py to get the phonograms
 # 3. Add the 2 features that are missing in the phonograms dataframe
  
 
 
 #%% Importing libraries
 import sys
-sys.path.insert(0,'../charsiu/src/')
-from Charsiu import Wav2Vec2ForFrameClassification, CharsiuPreprocessor_en, charsiu_forced_aligner
+import tables_speechRate as my_tables # ERROR QUE HAY QUE CORREGIR
+
+#sys.path.insert(0,'../charsiu/src/')
+from charsiu.src.Charsiu import Wav2Vec2ForFrameClassification, CharsiuPreprocessor_en, charsiu_forced_aligner
 import torch 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -135,7 +137,7 @@ plt.pcolor(d_deltas[0])
 plt.colorbar()
 
 
-
+#%% 
 #%% Create DataFrame with the mean, std,  of each phone
 features = []
 
@@ -145,7 +147,10 @@ for i in range(len(phonograms[0])):
                                 'mean_delta': np.mean(deltas[0][i,:]),
                                 'std_delta': np.std(deltas[0][i,:]),
                                 'mean_d_delta': np.mean(d_deltas[0][i,:]),
-                                'std_d_delta': np.std(d_deltas[0][i,:])})
+                                'std_d_delta': np.std(d_deltas[0][i,:]),
+                                'abs_mean_phonogram': np.mean(np.abs(phonograms[0][i,:])),
+                                'abs_mean_delta': np.mean(np.abs(deltas[0][i,:])),
+                                'abs_mean_d_delta': np.mean(np.abs(d_deltas[0][i,:]))})
 features = pd.DataFrame(features)
 features = pd.DataFrame(features)
 features.head()
