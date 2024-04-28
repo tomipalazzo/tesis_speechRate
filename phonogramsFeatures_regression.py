@@ -18,30 +18,25 @@ from sklearn import linear_model
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
-#%% Load the Dataframes of each record
+#%% Load TIMIT
 TIMIT = load_dataset('timit_asr', data_dir='/home/tomi/Documents/tesis_speechRate/timit')
 TIMIT_train = TIMIT['train']
 TIMIT_test = TIMIT['test']
 
-#%%
+#%% Load the Dataframes
 
-TIMIT_df_by_record_phone_test = pd.read_csv('TIMIT_df_by_record_phone_test.csv')
-TIMIT_df_by_record_phone_train = pd.read_csv('TIMIT_df_by_record_phone_train.csv')
-TIMIT_df_by_sample_train = pd.read_csv('TIMIT_df_by_sample_train.csv')
-TIMIT_df_by_sample_test = pd.read_csv('TIMIT_df_by_sample_test.csv')
+record_phone_test = pd.read_csv('TIMIT_df_by_record_phone_test.csv')
+record_phone_train = pd.read_csv('TIMIT_df_by_record_phone_train.csv')
+sample_phone_train = pd.read_csv('TIMIT_df_by_sample_train.csv')
+sample_phone_test = pd.read_csv('TIMIT_df_by_sample_test.csv')
 
 #%%
-TIMIT_df_by_sample_train
+sample_phone_train
 #%% Global Variables
 N_SAMPLES = 100
 
-#%%
-# Load the dataset
-sample_phone_train = TIMIT_df_by_record_phone_train
 
-# %%
-sample_phone_train
-# %% Magic happens here
+# %% -------------------- FORCED ALIGNMENT -----------------------------------
 
 
 # Line 1: Instantiate a forced aligner object from the 'charsiu' library using a specified model.
@@ -61,42 +56,50 @@ modelo.eval()
 # before it can be inputted to the model.
 procesador = CharsiuPreprocessor_en()
 
-#%% Do a Dataframe with sample_ID and the audio array
-TIMIT_train = TIMIT_train
-TIMIT_train_df = pd.DataFrame(TIMIT_train)
-#%%
-def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES):
+# ----------------------------------------------------------------------------
+
+#%% --------------------- FUNCTIONS ------------------------------------------
+def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  samples_already_computed = []):
     t0 = time.time()
     phonograms = []
+
+    print('--------------GETTING PHONOGRAMS-----------------')
+    for i in range(n_samples):
+        # if the sample has not been computed, we skip it
+        if not(i in samples_already_computed): 
+            sample = TIMIT_set[i]
+            audio_data = sample['audio']['array']
+            x = torch.tensor(np.array([audio_data]).astype(np.float32))
+            with torch.no_grad():
+                y = model(x).logits
+            y = y.numpy()[0].T
+            phonograms.append(y)
+
+        if i % 10 == 0:
+            print('SAMPLE ', i, ' OF ', n_samples)
+
+    t1 = time.time()
+    print('-------------------------------------------------')
+    print('Time to get phonograms: ', t1-t0)
+
+
+    return phonograms
+
+# Dataframes with the array of the samples (array_id, array)
+
+def get_sample_ID(dialect_region, speaker_id, id):
+    return dialect_region + '_' + speaker_id + '_' + id
+
+def get_sample_IDs(TIMIT_set, n_samples = N_SAMPLES):
+    sample_id = []
     for i in range(n_samples):
         sample = TIMIT_set[i]
-        audio_data = sample['audio']['array']
-        x = torch.tensor(np.array([audio_data]).astype(np.float32))
-        with torch.no_grad():
-            y = model(x).logits
-        y = y.numpy()[0].T
-        phonograms.append(y)
-    t1 = time.time()
-    print('Time to get phonograms: ', t1-t0)
-    return phonograms
-# %%
+        sample_id.append(get_sample_ID(sample['dialect_region'], sample['speaker_id'], sample['id']))
+    return sample_id
 
-# %% Dataframes with the array of the samples (array_id, array)
-sample_id = []
 
-for i in range(N_SAMPLES):
-    sample = TIMIT_train[i]
-    id = sample['dialect_region'] + '_' + sample['speaker_id'] + '_' + sample['id']
-    sample_id.append(id)
-#%% 
-
-phonograms = get_phonograms(TIMIT_train, modelo)
-
-# %% Dataframe (sample_id, phonogram)
-phonograms_df = pd.DataFrame({'sample_id': sample_id, 'phonogram': phonograms})
-
-# %% Phonogram features
-def get_phonogram_features(phonogram, sample_id):
+#  Phonogram features
+def phonogram_to_features(phonogram, sample_id):
     delta = librosa.feature.delta(phonogram)
     d_delta = librosa.feature.delta(phonogram, order=2)
 
@@ -104,37 +107,45 @@ def get_phonogram_features(phonogram, sample_id):
         dic = {'sample_id': sample_id}
         for j in range(1,42+1): # 42 is the number of phonemes
             dic['mean_phonogram_' + str(j)] = np.mean(phonogram[i,:])
-            dic['std_phonogram_' + str(j)] = np.std(phonogram[i,:])
             dic['mean_delta_' + str(j)] = np.mean(delta[i,:])
-            dic['std_delta_' + str(j)] = np.std(delta[i,:])
             dic['mean_d_delta_' + str(j)] = np.mean(d_delta[i,:])
+            dic['std_phonogram_' + str(j)] = np.std(phonogram[i,:])
+            dic['std_delta_' + str(j)] = np.std(delta[i,:])
             dic['std_d_delta_' + str(j)] = np.std(d_delta[i,:])
             dic['abs_mean_phonogram_' + str(j)] = np.mean(np.abs(phonogram[i,:]))
             dic['abs_mean_delta_' + str(j)] = np.mean(np.abs(delta[i,:]))
             dic['abs_mean_d_delta_' + str(j)] = np.mean(np.abs(d_delta[i,:]))
 
     features = pd.DataFrame(dic, index=[0])
-    return features  
-    
+    return features 
 
-#%%
-phonograms_features = []
-for i in range(len(phonograms)):
-    phonograms_features.append(get_phonogram_features(phonograms[i], sample_id=sample_id[i]))
+def df_of_phonogram_features(TIMIT_set, model, n_samples = N_SAMPLES):
+    phonograms = get_phonograms(TIMIT_set, model, n_samples)
+    sample_id = get_sample_IDs(TIMIT_set, n_samples)
 
-# %%
-phonograms_features_df = pd.concat(phonograms_features)
-phonograms_features_df.set_index('sample_id', inplace=True)
+    phonograms_features = []
+    for i in range(len(phonograms)):
+        phonograms_features.append(phonogram_to_features(phonograms[i], sample_id=sample_id[i]))
+
+    phonograms_features_df = pd.concat(phonograms_features)
+    phonograms_features_df.set_index('sample_id', inplace=True)
+    return phonograms_features_df
+
+#%% ------------------------------------------------------------------
+
+# Get phonogram features of N_SAMPLES samples in the training set
+
+phonograms_features_df = df_of_phonogram_features(TIMIT_train, modelo, n_samples = 100)
 #%%
 
 phonograms_features_df
 #%% 
 
-TIMIT_df_by_sample_train 
+sample_phone_train 
 # %%
-TIMIT_df_by_sample_train.set_index('sample_id', inplace=True)
+#sample_phone_train.set_index('sample_id', inplace=True)
 # %%
-df_X = pd.merge(phonograms_features_df, TIMIT_df_by_sample_train, left_index=True, right_index=True)
+df_X = pd.merge(phonograms_features_df, sample_phone_train, left_index=True, right_index=True)
 # %%
 X = df_X.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau'])
 y = df_X['mean_speed_wpau']
