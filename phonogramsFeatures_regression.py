@@ -59,14 +59,15 @@ procesador = CharsiuPreprocessor_en()
 # ----------------------------------------------------------------------------
 
 #%% --------------------- FUNCTIONS ------------------------------------------
-def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  samples_already_computed = []):
+def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  samples_not_calculated = []):
     t0 = time.time()
     phonograms = []
+    
 
     print('--------------GETTING PHONOGRAMS-----------------')
     for i in range(n_samples):
-        # if the sample has not been computed, we skip it
-        if not(i in samples_already_computed): 
+        sample_id = get_sample_ID(TIMIT_set[i]['dialect_region'], TIMIT_set[i]['speaker_id'], TIMIT_set[i]['id'])
+        if sample_id in samples_not_calculated:
             sample = TIMIT_set[i]
             audio_data = sample['audio']['array']
             x = torch.tensor(np.array([audio_data]).astype(np.float32))
@@ -119,37 +120,68 @@ def phonogram_to_features(phonogram, sample_id):
     features = pd.DataFrame(dic, index=[0])
     return features 
 
-def df_of_phonogram_features(TIMIT_set, model, n_samples = N_SAMPLES):
-    phonograms = get_phonograms(TIMIT_set, model, n_samples)
-    sample_id = get_sample_IDs(TIMIT_set, n_samples)
 
-    phonograms_features = []
+# Is samples_Id correctly mached with the phonograms?
+def df_of_phonogram_features(TIMIT_set, model, n_samples = N_SAMPLES, phonograms_features_csv = None, train=True):
+    
+    sample_IDs = get_sample_IDs(TIMIT_set, n_samples)
+    samples_not_calculated = []
+    if phonograms_features_csv is not None:
+        samples_not_calculated_index = [i for i in range(n_samples) if not(sample_IDs[i] in phonograms_features_csv['sample_id'].values)]
+        samples_not_calculated = [sample_IDs[j] for j in samples_not_calculated_index]
+    else:
+        samples_not_calculated = sample_IDs
+    
+    phonograms = get_phonograms(TIMIT_set, model, n_samples, samples_not_calculated = samples_not_calculated)
+    
+
+    phonograms_features = [phonograms_features_csv]
     for i in range(len(phonograms)):
-        phonograms_features.append(phonogram_to_features(phonograms[i], sample_id=sample_id[i]))
+        phonograms_features.append(phonogram_to_features(phonograms[i], sample_id=sample_IDs[i]))
 
     phonograms_features_df = pd.concat(phonograms_features)
     phonograms_features_df.set_index('sample_id', inplace=True)
+    
+    if train:
+        # save the dataframe
+        phonograms_features_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TRAIN.csv')
+    else:
+        phonograms_features_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TEST.csv')
+
+
     return phonograms_features_df
 
 #%% ------------------------------------------------------------------
 
 # Get phonogram features of N_SAMPLES samples in the training set
+data_phonograms_TRAIN = pd.read_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TRAIN.csv')
 
-phonograms_features_df = df_of_phonogram_features(TIMIT_train, modelo, n_samples = 100)
 #%%
+ALL_SAMPLES_TRAIN = 4620
+
+
+#%% 
+phonograms_features_df = df_of_phonogram_features(TIMIT_train, modelo, n_samples = ALL_SAMPLES_TRAIN , phonograms_features_csv = data_phonograms_TRAIN, train=True)
+#%% Now with Test
+test_size = len(TIMIT_test)
+phonograms_features_df_test = df_of_phonogram_features(TIMIT_test, modelo, n_samples = test_size , phonograms_features_csv = None, train=False)
 
 phonograms_features_df
 #%% 
 
 sample_phone_train 
 # %%
-#sample_phone_train.set_index('sample_id', inplace=True)
+sample_phone_train.set_index('sample_id', inplace=True)
+
+
+#%%
 # %%
 df_X = pd.merge(phonograms_features_df, sample_phone_train, left_index=True, right_index=True)
 # %%
 X = df_X.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau'])
 y = df_X['mean_speed_wpau']
 
+#%% 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 model = linear_model.LinearRegression()
 model.fit(X_train, y_train)
@@ -179,15 +211,33 @@ model = linear_model.LinearRegression()
 model.fit(X_train_pca, y_train)
 y_pred = model.predict(X_test_pca)
 mean_squared_error(y_test, y_pred)
-model.score(X_test_pca, y_test)
+print(model.score(X_test_pca, y_test))
 print(model.score(X_train_pca, y_train)
 )
 plt.figure()
-plt.scatter(X_train_pca, y_train)
-
+plt.scatter(X_train_pca, y_train,alpha=0.2)
+plt.title('Linear Regression with PCA (1 component)')
+plt.xlabel('PCA component')
+plt.ylabel('Speed')
+plt.show()
 # %%
 df_X.corr()
 # %%
 import seaborn as sns
 sns.heatmap(df_X.corr())
+# %%
+
+# %% 
+plt.scatter(X_test_pca, y_test, alpha=0.2)
+# %%
+model = linear_model.LinearRegression()
+model.fit(X_train_pca, y_train)
+y_pred_train = model.predict(X_train_pca)
+y_pred_test = model.predict(X_test_pca)  
+print(mean_squared_error(y_train, y_pred_train))
+print(mean_squared_error(y_test, y_pred))
+
+# %%
+print(model.score(X_train_pca, y_train))
+print(model.score(X_test_pca, y_test))
 # %%
