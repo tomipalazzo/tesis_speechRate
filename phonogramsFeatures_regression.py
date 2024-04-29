@@ -33,7 +33,7 @@ sample_phone_test = pd.read_csv('TIMIT_df_by_sample_test.csv')
 #%%
 sample_phone_train
 #%% Global Variables
-N_SAMPLES = 100
+N_SAMPLES = 10
 
 
 # %% -------------------- FORCED ALIGNMENT -----------------------------------
@@ -68,7 +68,7 @@ plt.pcolor(y)
 
 
 #%% --------------------- FUNCTIONS ------------------------------------------
-def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  samples_not_calculated = []):
+def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  train=True):
     t0 = time.time()
     phonograms = []
     
@@ -84,7 +84,7 @@ def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  samples_not_calcula
         with torch.no_grad():
             y = model(x).logits
         y = y.numpy()[0].T
-        phonograms.append([sample_id,y])
+        phonograms.append([sample_id,y]) 
 
         if i % 10 == 0:
             print('SAMPLE ', i, ' OF ', n_samples)
@@ -92,9 +92,16 @@ def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  samples_not_calcula
     t1 = time.time()
     print('-------------------------------------------------')
     print('Time to get phonograms: ', t1-t0)
-
-
-    return phonograms
+    # save the list of phonograms
+    phonograms_df = pd.DataFrame()
+    phonograms_df['sample_id'] = [sample[0] for sample in phonograms]
+    phonograms_df['phonogram'] = [sample[1] for sample in phonograms]
+    
+    if train:
+        phonograms_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_CHARSIU_df_TRAIN.csv', index=False)
+    else:
+        phonograms_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_CHARSIU_df_TEST.csv', index=False)
+    return phonograms_df
 
 # Dataframes with the array of the samples (array_id, array)
 
@@ -132,36 +139,6 @@ def phonogram_to_features(phonogram, sample_id):
     return features 
 
 
-# Is samples_Id correctly mached with the phonograms? Answer: NO 
-def df_of_phonogram_features(TIMIT_set, model, n_samples = N_SAMPLES, train=True):
-    
-    #sample_IDs = get_sample_IDs(TIMIT_set, n_samples)
-    #samples_not_calculated = []
-    #if phonograms_features_csv is not None:
-    #    samples_not_calculated_index = [i for i in range(n_samples) if not(sample_IDs[i] in phonograms_features_csv['sample_id'].values)]
-    #    samples_not_calculated = [sample_IDs[j] for j in samples_not_calculated_index]
-    #else:
-    #    samples_not_calculated = sample_IDs
-    
-    phonograms = get_phonograms(TIMIT_set, model, n_samples)
-    
-
-    phonograms_features = []
-    for i in range(len(phonograms)):
-        phonograms_features.append(phonogram_to_features(phonograms[i][1], sample_id=phonograms[i][0]))
-
-    phonograms_features_df = pd.concat(phonograms_features)
-    phonograms_features_df.set_index('sample_id', inplace=True)
-    
-    if train:
-        # save the dataframe
-        phonograms_features_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TRAIN.csv')
-    else:
-        phonograms_features_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TEST.csv')
-
-
-    return phonograms_features_df
-
 #%% ------------------------------------------------------------------
 
 # Get phonogram features of N_SAMPLES samples in the training set
@@ -173,11 +150,16 @@ data_phonograms_TEST.set_index('sample_id', inplace=True)
 #phonograms_features_df
 #%% 
 
-sample_phone_train 
+sample_phone_train.set_index('sample_id', inplace=True)
+
 # %%
+# Get phonograms TRAIN
+TRAIN_ROWS = len(TIMIT_train)
+get_phonograms(TIMIT_train, modelo, TRAIN_ROWS, train=True)
 
-
-#%%
+#%% Get phonograms TEST
+TEST_ROWS = len(TIMIT_test)
+get_phonograms(TIMIT_test, modelo, TEST_ROWS, train=False)
 # %%
 df_X = pd.merge(data_phonograms_TRAIN, sample_phone_train, left_index=True, right_index=True)
 # %%
