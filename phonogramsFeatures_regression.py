@@ -56,7 +56,16 @@ modelo.eval()
 # before it can be inputted to the model.
 procesador = CharsiuPreprocessor_en()
 
+#%%
+# Example: Forced alignment of an audio file
+x = torch.tensor(np.array([TIMIT_train[0]['audio']['array']]).astype(np.float32))
+with torch.no_grad():
+    y = modelo(x).logits
+y = y.numpy()[0].T
+plt.pcolor(y)
 # ----------------------------------------------------------------------------
+
+
 
 #%% --------------------- FUNCTIONS ------------------------------------------
 def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  samples_not_calculated = []):
@@ -66,15 +75,16 @@ def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  samples_not_calcula
 
     print('--------------GETTING PHONOGRAMS-----------------')
     for i in range(n_samples):
-        sample_id = get_sample_ID(TIMIT_set[i]['dialect_region'], TIMIT_set[i]['speaker_id'], TIMIT_set[i]['id'])
-        if sample_id in samples_not_calculated:
-            sample = TIMIT_set[i]
-            audio_data = sample['audio']['array']
-            x = torch.tensor(np.array([audio_data]).astype(np.float32))
-            with torch.no_grad():
-                y = model(x).logits
-            y = y.numpy()[0].T
-            phonograms.append(y)
+        sample = TIMIT_set[i]
+
+        sample_id = get_sample_ID(sample['dialect_region'], sample['speaker_id'], sample['id'])
+        
+        audio_data = sample['audio']['array']
+        x = torch.tensor(np.array([audio_data]).astype(np.float32))
+        with torch.no_grad():
+            y = model(x).logits
+        y = y.numpy()[0].T
+        phonograms.append([sample_id,y])
 
         if i % 10 == 0:
             print('SAMPLE ', i, ' OF ', n_samples)
@@ -116,28 +126,29 @@ def phonogram_to_features(phonogram, sample_id):
             dic['abs_mean_phonogram_' + str(j)] = np.mean(np.abs(phonogram[i,:]))
             dic['abs_mean_delta_' + str(j)] = np.mean(np.abs(delta[i,:]))
             dic['abs_mean_d_delta_' + str(j)] = np.mean(np.abs(d_delta[i,:]))
+            dic['mean_all_phonogram'] = np.mean(phonogram)
 
     features = pd.DataFrame(dic, index=[0])
     return features 
 
 
-# Is samples_Id correctly mached with the phonograms?
-def df_of_phonogram_features(TIMIT_set, model, n_samples = N_SAMPLES, phonograms_features_csv = None, train=True):
+# Is samples_Id correctly mached with the phonograms? Answer: NO 
+def df_of_phonogram_features(TIMIT_set, model, n_samples = N_SAMPLES, train=True):
     
-    sample_IDs = get_sample_IDs(TIMIT_set, n_samples)
-    samples_not_calculated = []
-    if phonograms_features_csv is not None:
-        samples_not_calculated_index = [i for i in range(n_samples) if not(sample_IDs[i] in phonograms_features_csv['sample_id'].values)]
-        samples_not_calculated = [sample_IDs[j] for j in samples_not_calculated_index]
-    else:
-        samples_not_calculated = sample_IDs
+    #sample_IDs = get_sample_IDs(TIMIT_set, n_samples)
+    #samples_not_calculated = []
+    #if phonograms_features_csv is not None:
+    #    samples_not_calculated_index = [i for i in range(n_samples) if not(sample_IDs[i] in phonograms_features_csv['sample_id'].values)]
+    #    samples_not_calculated = [sample_IDs[j] for j in samples_not_calculated_index]
+    #else:
+    #    samples_not_calculated = sample_IDs
     
-    phonograms = get_phonograms(TIMIT_set, model, n_samples, samples_not_calculated = samples_not_calculated)
+    phonograms = get_phonograms(TIMIT_set, model, n_samples)
     
 
-    phonograms_features = [phonograms_features_csv]
+    phonograms_features = []
     for i in range(len(phonograms)):
-        phonograms_features.append(phonogram_to_features(phonograms[i], sample_id=sample_IDs[i]))
+        phonograms_features.append(phonogram_to_features(phonograms[i][1], sample_id=phonograms[i][0]))
 
     phonograms_features_df = pd.concat(phonograms_features)
     phonograms_features_df.set_index('sample_id', inplace=True)
@@ -155,28 +166,20 @@ def df_of_phonogram_features(TIMIT_set, model, n_samples = N_SAMPLES, phonograms
 
 # Get phonogram features of N_SAMPLES samples in the training set
 data_phonograms_TRAIN = pd.read_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TRAIN.csv')
-
-#%%
-ALL_SAMPLES_TRAIN = 4620
-
-
-#%% 
-phonograms_features_df = df_of_phonogram_features(TIMIT_train, modelo, n_samples = ALL_SAMPLES_TRAIN , phonograms_features_csv = data_phonograms_TRAIN, train=True)
+data_phonograms_TEST = pd.read_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TEST.csv')
 #%% Now with Test
-test_size = len(TIMIT_test)
-phonograms_features_df_test = df_of_phonogram_features(TIMIT_test, modelo, n_samples = test_size , phonograms_features_csv = None, train=False)
-
-phonograms_features_df
+data_phonograms_TRAIN.set_index('sample_id', inplace=True)
+data_phonograms_TEST.set_index('sample_id', inplace=True)
+#phonograms_features_df
 #%% 
 
 sample_phone_train 
 # %%
-sample_phone_train.set_index('sample_id', inplace=True)
 
 
 #%%
 # %%
-df_X = pd.merge(phonograms_features_df, sample_phone_train, left_index=True, right_index=True)
+df_X = pd.merge(data_phonograms_TRAIN, sample_phone_train, left_index=True, right_index=True)
 # %%
 X = df_X.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau'])
 y = df_X['mean_speed_wpau']
@@ -226,6 +229,11 @@ df_X.corr()
 import seaborn as sns
 sns.heatmap(df_X.corr())
 # %%
+sample_phone_test.set_index('sample_id', inplace=True)
+#%%
+df_X_test = pd.merge(phonograms_features_df_test, sample_phone_test, left_index=True, right_index=True)
+sns.heatmap(df_X_test.corr())
+
 
 # %% 
 plt.scatter(X_test_pca, y_test, alpha=0.2)
