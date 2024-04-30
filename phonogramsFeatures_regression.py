@@ -17,6 +17,8 @@ import time
 from sklearn import linear_model
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+import ast  # For safely evaluating strings containing Python literals
+
 
 #%% Load TIMIT
 TIMIT = load_dataset('timit_asr', data_dir='/home/tomi/Documents/tesis_speechRate/timit')
@@ -84,8 +86,16 @@ def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  train=True):
         with torch.no_grad():
             y = model(x).logits
         y = y.numpy()[0].T
-        phonograms.append([sample_id,y]) 
 
+        # Save each phonogram as a matrix the ohonograms are numpy.ndarray
+        y_df = pd.DataFrame(y)
+        if train:
+            y_df.to_csv('../tesis_speechRate/data_phonograms/CHARSIU/Train/' + sample_id + '.csv', index=False)
+        else:
+            y_df.to_csv('../tesis_speechRate/data_phonograms/CHARSIU/Test/' + sample_id + '.csv', index=False)
+        
+        
+       # phonograms.append([sample_id,y]) 
         if i % 10 == 0:
             print('SAMPLE ', i, ' OF ', n_samples)
 
@@ -93,15 +103,15 @@ def get_phonograms(TIMIT_set, model, n_samples = N_SAMPLES,  train=True):
     print('-------------------------------------------------')
     print('Time to get phonograms: ', t1-t0)
     # save the list of phonograms
-    phonograms_df = pd.DataFrame()
-    phonograms_df['sample_id'] = [sample[0] for sample in phonograms]
-    phonograms_df['phonogram'] = [sample[1] for sample in phonograms]
-    
-    if train:
-        phonograms_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_CHARSIU_df_TRAIN.csv', index=False)
-    else:
-        phonograms_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_CHARSIU_df_TEST.csv', index=False)
-    return phonograms_df
+    #phonograms_df = pd.DataFrame()
+    #phonograms_df['sample_id'] = [sample[0] for sample in phonograms]
+    #phonograms_df['phonogram'] = [sample[1] for sample in phonograms]
+    #phonograms_df['phonogram'] = [np.array2string(sample[1]) for sample in phonograms]
+    #if train:
+    #    phonograms_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_CHARSIU_df_TRAIN_test.csv', index=False)
+    #else:
+    #    phonograms_df.to_csv('../tesis_speechRate/data_phonograms/phonograms_CHARSIU_df_TEST.csv', index=False)
+    #return phonograms_df
 
 # Dataframes with the array of the samples (array_id, array)
 
@@ -138,24 +148,35 @@ def phonogram_to_features(phonogram, sample_id):
     features = pd.DataFrame(dic, index=[0])
     return features 
 
+def feature_phonograms(phonogram):
+    phonogram_softmaxed = torch.softmax(torch.tensor(phonogram), dim=1).detach().numpy()   
 
 #%% ------------------------------------------------------------------
 
 # Get phonogram features of N_SAMPLES samples in the training set
 data_phonograms_TRAIN = pd.read_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TRAIN.csv')
 data_phonograms_TEST = pd.read_csv('../tesis_speechRate/data_phonograms/phonograms_features_df_TEST.csv')
+data_phonograms_Charsiu_TRAIN = pd.read_csv('../tesis_speechRate/data_phonograms/phonograms_CHARSIU_df_TRAIN.csv')
+data_phonograms_Charsiu_TEST = pd.read_csv('../tesis_speechRate/data_phonograms/phonograms_CHARSIU_df_TEST.csv')
 #%% Now with Test
 data_phonograms_TRAIN.set_index('sample_id', inplace=True)
 data_phonograms_TEST.set_index('sample_id', inplace=True)
 #phonograms_features_df
-#%% 
+#%% Parcing Matrix
+# Apply the conversion function to the DataFrame column
+
+
+data_phonograms_Charsiu_TRAIN['phonogram'] = data_phonograms_Charsiu_TRAIN['phonogram'].apply(parse_matrix_from_string) 
+
+
+#%%
 
 sample_phone_train.set_index('sample_id', inplace=True)
 
 # %%
 # Get phonograms TRAIN
 TRAIN_ROWS = len(TIMIT_train)
-get_phonograms(TIMIT_train, modelo, TRAIN_ROWS, train=True)
+test = get_phonograms(TIMIT_train, modelo, TRAIN_ROWS, train=True)
 
 #%% Get phonograms TEST
 TEST_ROWS = len(TIMIT_test)
