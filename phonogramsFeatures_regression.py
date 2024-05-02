@@ -215,7 +215,8 @@ X_TEST = df_X_TEST.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duratio
 y_TEST = df_X_TEST['mean_speed_wpau']
 #%% REGRESSION in TRAINING SET
 X_train, X_test, y_train, y_test = train_test_split(X_TRAIN, y_TRAIN, test_size=0.2)
-model = linear_model.LinearRegression()
+positive=True
+model = linear_model.LinearRegression(positive=positive)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 mean_squared_error(y_test, y_pred)
@@ -224,7 +225,7 @@ mean_squared_error(y_test, y_pred)
 y_train_pred = model.predict(X_train)
 y_test_pred = model.predict(X_test)
 
-print('========= REGRESSION ALL FEATURES =========')
+print('========= REGRESSION ALL FEATURES ' + 'POSITIVE=' + str(positive) + '=========')
 print('MSE(y_train, y_train_pred):',mean_squared_error(y_train, y_train_pred))
 print('MSE(y_test, y_test_pred):',mean_squared_error(y_test, y_test_pred))
 # R2 score
@@ -249,10 +250,11 @@ dimention = np.where(np.cumsum(pca.explained_variance_ratio_) < 0.95)
 pca = PCA(n_components=40)
 X_train_pca = pca.fit_transform(X_train)
 X_test_pca = pca.transform(X_test)
-model = linear_model.LinearRegression()
+positive=False
+model = linear_model.LinearRegression(positive=positive)
 model.fit(X_train_pca, y_train)
 y_pred = model.predict(X_test_pca)
-print('=========PCA 40 components=======')
+print('=========PCA 40 components ' + 'POSITIVE=' + str(positive) + '=========')
 print('MSE(y_test, y_pred):',mean_squared_error(y_test, y_pred))
 print('MSE(y_train, y_train_pred):',mean_squared_error(y_train, model.predict(X_train_pca)))
 print('SCORE(X_test, y_test):',model.score(X_test_pca, y_test))
@@ -273,11 +275,12 @@ sns.heatmap(df_X_test.corr())
 
 from sklearn.feature_selection import SelectKBest
 
-# Select the 10 best features
-selector = SelectKBest(k=20)
+# Select the K best features
+K = 20
+selector = SelectKBest(k=K)
 X_train_selected = selector.fit_transform(X_train, y_train)
 X_test_selected = selector.transform(X_test)
-model = linear_model.LinearRegression()
+model = linear_model.LinearRegression(positive=True)
 model.fit(X_train_selected, y_train)
 y_pred = model.predict(X_test_selected)
 
@@ -287,18 +290,19 @@ selected_features = X_train.columns[selected_features_mask]
 X_train_selected = X_train[selected_features]
 X_test_selected = X_test[selected_features]
 
-model = linear_model.LinearRegression()
+positive = False
+model = linear_model.LinearRegression(positive=positive)
 model.fit(X_train_selected, y_train)
 y_pred = model.predict(X_test_selected)
 
-print('=========SELECTED FEATURES (20)=======')
+print('=========SELECTED FEATURES ' + 'K=' + str(K) + ' POSITIVE=' + str(positive) + '=========')
 print('MSE(y_test, y_pred):', mean_squared_error(y_test, y_pred))
 print('MSE(y_train, y_train_pred):', mean_squared_error(y_train, model.predict(X_train_selected)))
 print('SCORE(X_test, y_test):', model.score(X_test_selected, y_test))
 print('SCORE(X_train, y_train):', model.score(X_train_selected, y_train))
 
 # Correlation of the selected features
-sns.heatmap(X_train_selected.corr())
+#sns.heatmap(X_train_selected.corr())
  
 # %% =============== FEATURE SELECTION ========================================= 
 from sklearn.feature_selection import SelectKBest
