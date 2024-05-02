@@ -161,7 +161,7 @@ def phonograms_to_features(sample_IDs, train = True):
     print('=================FINISHED===================')        
     return features
 
-def ffffffffffffffffffffffffffffffffffffff(phonogram):
+def feature_softmax(phonogram):
     phonogram_softmaxed = torch.softmax(torch.tensor(phonogram), dim=1).detach().numpy()   
 
 
@@ -191,8 +191,8 @@ SAMPLE_IDs_TEST = get_sample_IDs(TIMIT_test, N_TEST)
 
 # Get phonogram features of N_SAMPLES samples in the training set
 
-#phonogram_features_TRAIN = phonograms_to_features(SAMPLE_IDs_TRAIN, train = True)
-#phonogram_features_TEST = phonograms_to_features(SAMPLE_IDs_TEST, train = False)
+phonogram_features_TRAIN = phonograms_to_features(SAMPLE_IDs_TRAIN, train = True)
+phonogram_features_TEST = phonograms_to_features(SAMPLE_IDs_TEST, train = False)
 #%%
 phonogram_features_TRAIN.set_index('sample_id', inplace=True)
 phonogram_features_TEST.set_index('sample_id', inplace=True)
@@ -200,14 +200,16 @@ phonogram_features_TEST.set_index('sample_id', inplace=True)
 #%% -------------------------- REGRESSION -------------------------------------
 
 # Merge the phonogram features with the sample_phone dataframes
-#sample_phone_train.set_index('sample_id', inplace=True)
-#sample_phone_test.set_index('sample_id', inplace=True)
+sample_phone_train.set_index('sample_id', inplace=True)
+sample_phone_test.set_index('sample_id', inplace=True)
 
 df_X_TRAIN = pd.merge(phonogram_features_TRAIN, sample_phone_train, left_index=True, right_index=True)
-# %%
+# %% TRAIN SET
 X_TRAIN = df_X_TRAIN.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau'])
 y_TRAIN = df_X_TRAIN['mean_speed_wpau']
 
+
+#%% TEST SET
 df_X_TEST = pd.merge(phonogram_features_TEST, sample_phone_test, left_index=True, right_index=True)
 X_TEST = df_X_TEST.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau'])
 y_TEST = df_X_TEST['mean_speed_wpau']
@@ -267,18 +269,38 @@ sample_phone_test.set_index('sample_id', inplace=True)
 df_X_test = pd.merge(phonograms_features_df_test, sample_phone_test, left_index=True, right_index=True)
 sns.heatmap(df_X_test.corr())
 
+# %% =================== FEATURES SELECTION ===================================
 
-# %% 
-plt.scatter(X_test_pca, y_test, alpha=0.2)
-# %%
+from sklearn.feature_selection import SelectKBest
+
+# Select the 10 best features
+selector = SelectKBest(k=20)
+X_train_selected = selector.fit_transform(X_train, y_train)
+X_test_selected = selector.transform(X_test)
 model = linear_model.LinearRegression()
-model.fit(X_train_pca, y_train)
-y_pred_train = model.predict(X_train_pca)
-y_pred_test = model.predict(X_test_pca)  
-print(mean_squared_error(y_train, y_pred_train))
-print(mean_squared_error(y_test, y_pred))
+model.fit(X_train_selected, y_train)
+y_pred = model.predict(X_test_selected)
 
-# %%
-print(model.score(X_train_pca, y_train))
-print(model.score(X_test_pca, y_test))
+selected_features_mask = selector.get_support()
+selected_features = X_train.columns[selected_features_mask]
+
+X_train_selected = X_train[selected_features]
+X_test_selected = X_test[selected_features]
+
+model = linear_model.LinearRegression()
+model.fit(X_train_selected, y_train)
+y_pred = model.predict(X_test_selected)
+
+print('=========SELECTED FEATURES (20)=======')
+print('MSE(y_test, y_pred):', mean_squared_error(y_test, y_pred))
+print('MSE(y_train, y_train_pred):', mean_squared_error(y_train, model.predict(X_train_selected)))
+print('SCORE(X_test, y_test):', model.score(X_test_selected, y_test))
+print('SCORE(X_train, y_train):', model.score(X_train_selected, y_train))
+
+# Correlation of the selected features
+sns.heatmap(X_train_selected.corr())
+ 
+# %% =============== FEATURE SELECTION ========================================= 
+from sklearn.feature_selection import SelectKBest
+
 # %%
