@@ -221,12 +221,14 @@ mean_squared_error(y_test, y_pred)
 #%%
 y_train_pred = model.predict(X_train)
 y_test_pred = model.predict(X_test)
-print(mean_squared_error(y_train, y_train_pred))
-print(mean_squared_error(y_test, y_test_pred))
+
+print('========= REGRESSION ALL FEATURES =========')
+print('MSE(y_train, y_train_pred):',mean_squared_error(y_train, y_train_pred))
+print('MSE(y_test, y_test_pred):',mean_squared_error(y_test, y_test_pred))
 # R2 score
-# R2 score
-print(model.score(X_train, y_train))
-print(model.score(X_test, y_test))
+print('SCORE(X_train, y_train):',model.score(X_train, y_train))
+print('SCORE(X_test, y_test):',model.score(X_test, y_test))
+
 
 
 
@@ -235,19 +237,24 @@ from sklearn.decomposition import PCA
 pca = PCA()
 pca.fit(X_train)
 plt.plot(np.cumsum(pca.explained_variance_ratio_))
+plt.xlabel('number of components')
+plt.ylabel('cumulative explained variance')
+plt.grid()
 # 95% of the variance
 dimention = np.where(np.cumsum(pca.explained_variance_ratio_) < 0.95)
 
 #%%
-pca = PCA(n_components=200)
+pca = PCA(n_components=40)
 X_train_pca = pca.fit_transform(X_train)
 X_test_pca = pca.transform(X_test)
 model = linear_model.LinearRegression()
 model.fit(X_train_pca, y_train)
 y_pred = model.predict(X_test_pca)
-print(mean_squared_error(y_test, y_pred))
-print(model.score(X_test_pca, y_test))
-print(model.score(X_train_pca, y_train))
+print('=========PCA 40 components=======')
+print('MSE(y_test, y_pred):',mean_squared_error(y_test, y_pred))
+print('MSE(y_train, y_train_pred):',mean_squared_error(y_train, model.predict(X_train_pca)))
+print('SCORE(X_test, y_test):',model.score(X_test_pca, y_test))
+print('SCORE(X_train, y_train):',model.score(X_train_pca, y_train))
 
 # %%
 df_X_TRAIN.corr()
