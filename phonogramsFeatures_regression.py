@@ -1,5 +1,9 @@
 #%% #import tables_speechRate as my_tables
 
+#%% TO DO 
+# 1. Identify the silence and call it 'sil'
+# 2. Do the Pablo's features
+
 import sys
 #from charsiu.src import models
 from charsiu.src.Charsiu import Wav2Vec2ForFrameClassification, CharsiuPreprocessor_en, charsiu_forced_aligner
@@ -60,16 +64,38 @@ modelo.eval()
 # This object is likely used to prepare audio data by normalizing or applying necessary transformations 
 # before it can be inputted to the model.
 procesador = CharsiuPreprocessor_en()
+#%%
+phonemes_index = np.arange(0,42)
+phonemes = [charsiu.charsiu_processor.mapping_id2phone(int(i)) for i in phonemes_index]
+print(phonemes)
 
 #%%
 # Example: Forced alignment of an audio file
+
+#%% --------------------- EXAMPLE OF FORCED ALIGNMENT --------------------------
 x = torch.tensor(np.array([TIMIT_train[0]['audio']['array']]).astype(np.float32))
 with torch.no_grad():
     y = modelo(x).logits
+    y_softmax = torch.softmax(y, dim=2)
+
 y = y.numpy()[0].T
+y_softmax = y_softmax.numpy()[0].T
+
+plt.figure(figsize=(10, 7))
 plt.pcolor(y)
+plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+plt.title('Phonogram')
+plt.colorbar()
+plt.show()
 # ----------------------------------------------------------------------------
 
+#%% With softmax
+plt.figure(figsize=(10, 7))
+plt.pcolor(y_softmax)
+plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+plt.title('Phonogram')
+plt.colorbar()
+plt.show()
 
 
 #%% --------------------- FUNCTIONS ------------------------------------------

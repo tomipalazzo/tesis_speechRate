@@ -1,15 +1,14 @@
 
 
 #%% TO DO 
-# 1. Check the values of mean_phonegram - OK
-# 2. use the Datasets os tables_speechRate.py to get the phonograms
-# 3. Add the 2 features that are missing in the phonograms dataframe
+# 1. Identify the silence and call it 'sil'
+# 2. Do the Pablo's features
  
 
 
 #%% Importing libraries
 import sys
-import tables_speechRate as my_tables # ERROR QUE HAY QUE CORREGIR
+#import tables_speechRate as my_tables # ERROR QUE HAY QUE CORREGIR
 
 #sys.path.insert(0,'../charsiu/src/')
 from charsiu.src.Charsiu import Wav2Vec2ForFrameClassification, CharsiuPreprocessor_en, charsiu_forced_aligner
@@ -21,6 +20,7 @@ from datasets import load_dataset
 import pandas as pd
 import random
 import librosa
+from charsiu.src.utils import seq2duration, forced_align
 
 # %%
 
@@ -29,8 +29,38 @@ TIMIT_train = TIMIT['train']
 TIMIT_test = TIMIT['test']
 
 sample = TIMIT_train[1]# %%
+#%%
 
+path = '/home/tomi/Documents/tesis_speechRate/timit/data/TRAIN/DR1/FCJF0/SI648.WAV.wav'
+#%% open txt
+with open('/home/tomi/Documents/tesis_speechRate/timit/data/TRAIN/DR1/FCJF0/SI648.phn') as f:
+    lines = f.readlines()
+    for line in lines:
+        print(line)
+import os
+current_directory = os.getcwd()
+print(current_directory)
+os.path.exists(path)
+#%%
+# if there are errors importing, uncomment the following lines and add path to charsiu
+# import sys
+# sys.path.append('path_to_charsiu/src')
 
+# initialize model
+charsiu = charsiu_forced_aligner(aligner='charsiu/en_w2v2_fc_10ms')
+# perform forced alignment
+
+phonemes_index = np.arange(0,42)
+
+phonemes = [charsiu.charsiu_processor.mapping_id2phone(int(i)) for i in phonemes_index]
+print(phonemes)
+
+alignment = charsiu.align(audio=path,
+                          text='She had your dark suit in greasy wash water all year.')
+# perform forced alignment and save the output as a textgrid file
+charsiu.serve(audio=path,
+              text='A sailboat may have a bone in her teeth one minute and lie becalmed the next.',
+              save_to='ejemplo.TextGrid')
 #%% Show the sample
 # Access the audio data and sample rate
 audio_data = sample['audio']['array']
@@ -49,7 +79,11 @@ charsiu = charsiu_forced_aligner(aligner='charsiu/en_w2v2_fc_10ms')
 # Line 2: Load a pre-trained model from Hugging Face's 'transformers' library.
 # This model is likely a fine-tuned version of Wav2Vec 2.0 for the task of frame classification, useful for tasks like forced alignment or phoneme recognition.
 modelo = Wav2Vec2ForFrameClassification.from_pretrained("charsiu/en_w2v2_fc_10ms")
+#%%
+modelo = charsiu.aligner
 
+
+#%%
 # Line 3: Set the model to evaluation mode. This disables training specific behaviors like dropout, 
 # ensuring the model's inference behavior is consistent and deterministic.
 modelo.eval()
@@ -59,6 +93,14 @@ modelo.eval()
 # before it can be inputted to the model.
 procesador = CharsiuPreprocessor_en()
 
+#%%
+phones, words = charsiu.charsiu_processor.get_phones_and_words('She had your dark suit in greasy wash water all year.')
+phone_ids = charsiu.charsiu_processor.get_phone_ids(phones)
+print(charsiu.charsiu_processor.sil_idx)
+#%% GET PHONE IDs
+
+
+#%%
 # Line 5: Convert the audio data from a sample dictionary to a Torch tensor, necessary for processing with PyTorch models.
 # 'np.array([sample['audio']['array']])' converts the audio samples to a NumPy array and wraps it in another array to add a batch dimension.
 # '.astype(np.float32)' ensures that the data type is float32, which is typically required for neural network inputs in PyTorch.
@@ -69,18 +111,30 @@ x = torch.tensor(np.array([sample['audio']['array']]).astype(np.float32))
 with torch.no_grad():
     # Line 7: Pass the preprocessed audio tensor 'x' through the model to obtain logits.
     # Logits are raw, non-normalized scores outputted by the last layer of a neural network. These need to be passed through a softmax layer to turn them into probabilities if necessary.
-    y = modelo(x).logits
+    predictions = modelo(x)
+    y = predictions.logits
+    y_mod = modelo(x)
     y_prob = torch.nn.functional.softmax(y, dim=-1)
+    
+#%% Information of predictions
+print(predictions)
+
+print(y)
 
 
 y = y.numpy()[0].T
-y_prob = y_prob.numpy()[0].T
+#y_prob = y_prob.numpy()[0].T
+#print(y_mod)
+
+#%%
 
 
 #%%
 
 plt.pcolor(y)
 plt.colorbar()
+
+plt.yticks(np.arange(0.5, len(phonemes)), phonemes)
 plt.title('Phonogram')
 
 #%% 
