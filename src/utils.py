@@ -24,12 +24,13 @@ def plot_words_duration(sample, SR=16000):
     '''
 
 
-    words = sample['word_detail']['utterance']
-    start = sample['word_detail']['start']
-    stop = sample['word_detail']['stop']
+    words = sample['word_detail']['utterance'].copy()
+    start = sample['word_detail']['start'].copy()
+    stop = sample['word_detail']['stop'].copy()
 
     words.insert(0, 'silence')
     stop.insert(0, start[0])
+    start.insert(0, 0)
     time_of_word = []
 
     i = 0
@@ -59,9 +60,15 @@ def speed_by_word(sample, SR=16000):
     Output: A plot with the speed of each word in the sample.
     '''
 
-    words = sample['word_detail']['utterance']
-    start = sample['word_detail']['start']
-    stop = sample['word_detail']['stop']
+    words = sample['word_detail']['utterance'].copy()
+    start = sample['word_detail']['start'].copy()
+    stop = sample['word_detail']['stop'].copy()
+    
+    words.insert(0, 'silence')
+    stop.insert(0, start[0])
+    start.insert(0, 0)
+ 
+    
     time_of_word = np.zeros(stop[-1])
     word_interval = np.zeros(len(words))
     speed_of_word = np.zeros(len(words))
@@ -75,6 +82,7 @@ def speed_by_word(sample, SR=16000):
 
     
     speed_of_word = 1 /(word_interval / SR)
+    #speed_by_word[0] = 0 # Is the silence
     print(speed_of_word)
     i = 0
     for j in range(start[0], stop[-1]):
@@ -89,7 +97,7 @@ def speed_by_word(sample, SR=16000):
     plt.plot(time, time_of_word)
     plt.xlabel('Time (s)')
     plt.ylabel('Words')
-    plt.title('Word Duration in Time Domain')
+    plt.title('Word Speed in Time Domain')
 
     return time, time_of_word
 
@@ -174,7 +182,7 @@ def plot_speed_by_phone(sample, SR=16000):
     plt.plot(time, time_of_phone)
     plt.xlabel('Time (s)')
     plt.ylabel('Words')
-    plt.title('Word Duration in Time Domain')
+    plt.title('Phone Speed in Time Domain')
 
     return time, time_of_phone
 

@@ -53,6 +53,9 @@ print(show)
 #%% plot words duration
 ut.plot_words_duration(sample=SAMPLE, SR=SR)
 
+
+#%% 
+ut.speed_by_word(sample=SAMPLE, SR=SR)
 #%% SPEED BY phone
 X, y = ut.plot_speed_by_phone(sample=SAMPLE)
 
@@ -132,4 +135,31 @@ def plot_mean_speed(sample_id, df_of_records):
 
 # %%
 plot_mean_speed('DR1_CJF0_SA1', TIMIT_df_by_record.phone_train)
+# %% ======================== WINDOWED REGRESSION ========================
+def window_regression(X,y, step_size=10, window_size=100):
+    """
+    This function makes a windowed regression of the data X and y. The window size is the number of points that the 
+    regression will take into account. The step size is the number of points that the window will move in each iteration.
+    """
+    # Initialize the variables
+    n = len(y)
+    x_axis = []
+    y_hat = []
+
+    for i in range(0,n,step_size):
+        left = max(0, i-window_size)
+        right = min(n-1, i+window_size)
+        y_window = y[left:right]
+        y_hat.append(np.mean(y_window))
+        x_axis.append(X[i])
+    
+    return y_hat, x_axis
+
+# %%
+y_hat, x_axis = window_regression(X, y,step_size=50, window_size=10)
+# %%
+plt.scatter(X,y)
+plt.plot(x_axis, y_hat, color='red')
+# %%
+print(len(y_hat))
 # %%
