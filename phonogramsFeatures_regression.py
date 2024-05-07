@@ -1,8 +1,11 @@
 #%% #import tables_speechRate as my_tables
 
 #%% TO DO 
-# 1. Identify the silence and call it 'sil'
-# 2. Do the Pablo's features
+# 1. Identify the silence and call it 'sil' - OK
+# 1.1 Do the necesary changes - OK
+# 2. Do the Pablo's features - OK
+# 3 Split train and test correctly
+
 
 import sys
 #from charsiu.src import models
@@ -72,21 +75,27 @@ print(phonemes)
 #%%
 # Example: Forced alignment of an audio file
 
-#%% --------------------- EXAMPLE OF FORCED ALIGNMENT --------------------------
-x = torch.tensor(np.array([TIMIT_train[0]['audio']['array']]).astype(np.float32))
+# Audio by my own: 
+audio_file = '../tesis_speechRate/audios_tomas/she_has_your.wav'  # Replace with the path to your audio file
+waveform, sample_rate = librosa.load(audio_file, sr=None)
+x = torch.tensor(np.array([waveform]).astype(np.float32))
 with torch.no_grad():
+    y = modelo(x)
     y = modelo(x).logits
     y_softmax = torch.softmax(y, dim=2)
 
 y = y.numpy()[0].T
 y_softmax = y_softmax.numpy()[0].T
 
+y_softmax[0,:] = 1
 plt.figure(figsize=(10, 7))
-plt.pcolor(y)
+plt.pcolor(y_softmax)
 plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
 plt.title('Phonogram')
 plt.colorbar()
 plt.show()
+
+
 # ----------------------------------------------------------------------------
 
 #%% With softmax
@@ -159,7 +168,7 @@ def phonogram_to_features(sample_ID, train=True):
 
 
     dic = {'sample_id': sample_ID}
-    for j in range(42): # 42 is the number of phonemes
+    for j in range(1,42): # 42 is the number of phonemes / It starts from 1 because the first column is the [SIL] phoneme
         dic['mean_phone_' + str(j+1)] = np.mean(phonogram[j,:])
         dic['mean_delta_' + str(j+1)] = np.mean(delta[j,:])
         dic['mean_d_delta_' + str(j+1)] = np.mean(d_delta[j,:])
@@ -176,6 +185,7 @@ def phonogram_to_features(sample_ID, train=True):
     dic['abs_all_phonogram'] = np.mean(np.abs(phonogram))
     dic['abs_all_delta'] = np.mean(np.abs(delta))
     dic['abs_all_d_delta'] = np.mean(np.abs(d_delta))
+    dic['mean_how_many_phones'] = mean_phones(phonogram)
 
     features = pd.DataFrame(dic, index=[0])
     return features
@@ -193,14 +203,78 @@ def phonograms_to_features(sample_IDs, train = True):
     print('=================FINISHED===================')        
     return features
 
-def feature_softmax(phonogram):
-    phonogram_softmaxed = torch.softmax(torch.tensor(phonogram), dim=1).detach().numpy()   
+def softmax_phonogram(phonogram):
+    # dataframe to torch
+    phonogram = torch.tensor(phonogram.astype(np.float32))
+    phonogram_softmax = torch.softmax(phonogram, dim=0)
+    #to numpy
+    phonogram_softmax = phonogram_softmax.numpy()
 
+    return phonogram_softmax
+
+def how_many_phones_since_t(phonogram, t=0):
+    T = phonogram.shape[1]
+
+    if t == 0:
+        t = T
+
+    phonogram_softmax = softmax_phonogram(phonogram)
+
+    
+    phonogram_softmax = phonogram_softmax > 0.5
+
+    s = np.zeros(T)
+    how_many_until_i = 0
+
+    argmax = -1
+    for i in range(T):
+        arg_max_new = np.argmax(phonogram_softmax[:,i])
+        is_a_silence = arg_max_new == 0
+        is_a_new_phone = arg_max_new != argmax 
+
+        if (is_a_new_phone) and (not is_a_silence):
+            argmax = arg_max_new
+            how_many_until_i += 1
+            s[i] = how_many_until_i
+    return how_many_until_i
+        
+def mean_phones(phonogram):
+    how_many_phones = how_many_phones_since_t(phonogram)
+    T = phonogram.shape[1]/100 # 100 is the number of frames per second
+    return how_many_phones/T
+
+#%% Test the functions
+SAMPLE_ID = SAMPLE_IDs_TRAIN[0]
+# read the phonogram
+phonogram = pd.read_csv('../tesis_speechRate/data_phonograms/CHARSIU/Train/'+SAMPLE_ID+'.csv')
+
+plt.figure(figsize=(10, 7))
+plt.pcolor(phonogram)
+plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+plt.title('Phonogram')
+plt.colorbar()
+plt.show()
+
+phonogram_softmax = softmax_phonogram(phonogram)
+phonogram_softmax = phonogram_softmax > 0.5
+plt.figure(figsize=(10, 7))
+plt.pcolor(phonogram_softmax)
+plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+plt.title('Phonogram')
+#%%
+
+#how_many_phones_since_t(phonogram)
+print(how_many_phones_since_t(phonogram))
+mean_phones(phonogram)
 
 #%% -------------------------- GENERATE PHONOGRAMS -----------------------------
 # OBS: This process takes a long time. It save the phonograms as csv files in the data_phonograms folder 
 
-# get_phonograms(TIMIT_train, modelo, N_TRAIN, train=True)
+
+N_TRAIN = len(TIMIT_train)
+N_TEST = len(TIMIT_test)
+
+#get_phonograms(TIMIT_train, modelo, N_TRAIN, train=True)
 
 
 
@@ -211,8 +285,6 @@ def feature_softmax(phonogram):
 
 #%% ---------------------------- GLOBAL VARIABLES --------------------------------
 
-N_TRAIN = len(TIMIT_train)
-N_TEST = len(TIMIT_test)
 SAMPLE_IDs_TRAIN = get_sample_IDs(TIMIT_train, N_TRAIN)
 SAMPLE_IDs_TEST = get_sample_IDs(TIMIT_test, N_TEST)
 
