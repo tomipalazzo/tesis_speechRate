@@ -24,6 +24,7 @@ import time
 from sklearn import linear_model
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+import seaborn as sns
 import ast  # For safely evaluating strings containing Python literals
 
 # ---------------------------- LOAD DATASET -----------------------------------
@@ -255,11 +256,13 @@ plt.title('Phonogram')
 plt.colorbar()
 plt.show()
 
+phonogram = phonogram.to_numpy()
 phonogram_softmax = softmax_phonogram(phonogram)
 phonogram_softmax = phonogram_softmax > 0.5
 plt.figure(figsize=(10, 7))
 plt.pcolor(phonogram_softmax)
 plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+plt.colorbar()
 plt.title('Phonogram')
 #%%
 
@@ -478,6 +481,87 @@ for i in range(4):
 plt.bar(np.arange(4), MSE_features)
 
 # Matrix of correlation
+
+
+# %% ==================== FAMILY OF FEATURES ============================= 
+A = ['mean_all_phonogram']
+B = ['mean_all_delta']
+C = ['mean_all_d_delta']
+D = ['std_all_phonogram']
+E = ['abs_all_delta']
+
+#%% ALl PHONES FEATURES
+F = []
+for i in range(2,42):
+    F.append('mean_phone_' + str(i))
+    F.append('std_phone_' + str(i))
+    F.append('std_d_delta_' + str(i))
+    F.append('abs_mean_phone_' + str(i))
+    F.append('abs_mean_delta_' + str(i))
+
+#%% NEW FEATURES
+G = ['mean_how_many_phones']
+
+#%% Regression by groups
+
+features = [A,B,C,D,E,F,G]
+MSE_features = np.zeros(len(features))
+for j in range(50):
+    for i in range(len(features)):
+        print('Features:', features[i])
+        y_TRAIN = df_X_TRAIN['mean_speed_wpau']
+        df_X_TRAIN_fi = df_X_TRAIN[features[i]]
+        
+        # Regression
+        X_train, X_test, y_train, y_test = train_test_split(df_X_TRAIN_fi, y_TRAIN, test_size=0.2)
+        positive=True
+        model = linear_model.LinearRegression(positive=positive)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        MSE_features[i] += mean_squared_error(y_test, y_pred)
+
+mean_MSE_features = MSE_features/50
+
+#%% Now the same but with without pauses
+y_TRAIN = df_X_TRAIN['mean_speed_wopau']
+MSE_features = np.zeros(len(features))
+for j in range(50):
+    for i in range(len(features)):
+        print('Features:', features[i])
+        df_X_TRAIN_fi = df_X_TRAIN[features[i]]
+        
+        # Regression
+        X_train, X_test, y_train, y_test = train_test_split(df_X_TRAIN_fi, y_TRAIN, test_size=0.2)
+        positive=True
+        model = linear_model.LinearRegression(positive=positive)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        MSE_features[i] += mean_squared_error(y_test, y_pred)
+
+mean_MSE_features_wopau = MSE_features/50
+#%%
+# Do barplot of the features with MSE add one next to the other
+x = np.arange(len(features))
+width = 0.35  # the width of the bars
+fig, ax = plt.subplots()
+rects1 = ax.bar(x - width/2, mean_MSE_features, width, label='Whith pauses')
+rects2 = ax.bar(x + width/2, mean_MSE_features_wopau, width, label='Without pauses')
+plt.xticks(np.arange(len(features)), ['Mean Phonogram','Mean Delta Phonogram','Mean DDelta Pronogram','STD Phonogram','ABS Delta Phonogram','Features Each Phone','OUR Feature']
+           , rotation=50)
+
+# Add in this plot the name of each feature
+plt.xlabel('Groups of features')
+plt.ylabel('Mean Squared Error')
+plt.legend()
+plt.show()
+
+
+# %% Correlation Matrix
+
+ALL_FEATURES = A + B + C + D + E + F + G
+X_TRAIN_ALL = X_TRAIN[ALL_FEATURES]
+sns.heatmap(X_TRAIN_ALL.corr())
+
 
 
 # %%
