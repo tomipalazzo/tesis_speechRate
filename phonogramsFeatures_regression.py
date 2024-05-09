@@ -155,6 +155,14 @@ def get_sample_IDs(TIMIT_set, n_samples = 10):
         sample_id.append(get_sample_ID(sample['dialect_region'], sample['speaker_id'], sample['id']))
     return sample_id
 
+def get_dialectRegion_and_speacker_ID(sample_ID):
+    # Sample_ID is an string, for example: 'DR1_CJF0_SA1'
+    # Until the first '_' is Dialect region
+    # Until the second '_' is the speaker ID
+    parts = sample_ID.split('_')
+    DR_ID = parts[0]
+    speaker_ID = parts[1]
+    return DR_ID, speaker_ID
 
 #  Phonogram features
 def phonogram_to_features(sample_ID, train=True):
@@ -166,9 +174,13 @@ def phonogram_to_features(sample_ID, train=True):
     phonogram = phonogram.to_numpy()
     delta = librosa.feature.delta(phonogram)
     d_delta = librosa.feature.delta(phonogram, order=2)
-
+    
+    DR_ID, speaker_ID = get_dialectRegion_and_speacker_ID(sample_ID=sample_ID)
 
     dic = {'sample_id': sample_ID}
+    dic['region_id'] =  DR_ID
+    dic['speaker_id'] = speaker_ID
+    
     for j in range(1,42): # 42 is the number of phonemes / It starts from 1 because the first column is the [SIL] phoneme
         dic['mean_phone_' + str(j+1)] = np.mean(phonogram[j,:])
         dic['mean_delta_' + str(j+1)] = np.mean(delta[j,:])
@@ -304,186 +316,36 @@ phonogram_features_TEST = phonograms_to_features(SAMPLE_IDs_TEST, train = False)
 phonogram_features_TRAIN.set_index('sample_id', inplace=True)
 phonogram_features_TEST.set_index('sample_id', inplace=True)
 
-#%% -------------------------- REGRESSION -------------------------------------
 
 # Merge the phonogram features with the sample_phone dataframes
 sample_phone_train.set_index('sample_id', inplace=True)
 sample_phone_test.set_index('sample_id', inplace=True)
 #%%
 df_X_TRAIN = pd.merge(phonogram_features_TRAIN, sample_phone_train, left_index=True, right_index=True)
+#%% -------------------------- SPLITTING -------------------------------------
+speaker_id = df_X_TRAIN['speaker_id'].unique()
+n_speakers = len(speaker_id)
+
+# 80% Train - 20% Val
+n_train = round(0.8*n_speakers)
+n_val = n_speakers - n_train
+# Choose randomly
+random.shuffle(speaker_id)
+speaker_id_train = speaker_id[:n_train]
+speaker_id_val = speaker_id[n_train:]
+#%%
+# Filter the speaker_id_train
+df_TRAIN = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(speaker_id_train)]
+df_VAL = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(speaker_id_val)]
+
+
 # %% TRAIN SET
-X_TRAIN = df_X_TRAIN.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau'])
-y_TRAIN = df_X_TRAIN['mean_speed_wpau']
-
-
-#%% TEST SET
-df_X_TEST = pd.merge(phonogram_features_TEST, sample_phone_test, left_index=True, right_index=True)
-X_TEST = df_X_TEST.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau'])
-y_TEST = df_X_TEST['mean_speed_wpau']
-#%% REGRESSION in TRAINING SET
-X_train, X_test, y_train, y_test = train_test_split(X_TRAIN, y_TRAIN, test_size=0.2)
-positive=True
-model = linear_model.LinearRegression(positive=positive)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-mean_squared_error(y_test, y_pred)
-
-#%%
-y_train_pred = model.predict(X_train)
-y_test_pred = model.predict(X_test)
-
-print('========= REGRESSION ALL FEATURES ' + 'POSITIVE=' + str(positive) + '=========')
-print('MSE(y_train, y_train_pred):',mean_squared_error(y_train, y_train_pred))
-print('MSE(y_test, y_test_pred):',mean_squared_error(y_test, y_test_pred))
-# R2 score
-print('SCORE(X_train, y_train):',model.score(X_train, y_train))
-print('SCORE(X_test, y_test):',model.score(X_test, y_test))
-
-
-
-
-#%% ======================== PCA =============================================== 
-from sklearn.decomposition import PCA
-pca = PCA()
-pca.fit(X_train)
-plt.plot(np.cumsum(pca.explained_variance_ratio_))
-plt.xlabel('number of components')
-plt.ylabel('cumulative explained variance')
-plt.grid()
-# 95% of the variance
-dimention = np.where(np.cumsum(pca.explained_variance_ratio_) < 0.95)
-
-#%%
-pca = PCA(n_components=40)
-X_train_pca = pca.fit_transform(X_train)
-X_test_pca = pca.transform(X_test)
-positive=False
-model = linear_model.LinearRegression(positive=positive)
-model.fit(X_train_pca, y_train)
-y_pred = model.predict(X_test_pca)
-print('=========PCA 40 components ' + 'POSITIVE=' + str(positive) + '=========')
-print('MSE(y_test, y_pred):',mean_squared_error(y_test, y_pred))
-print('MSE(y_train, y_train_pred):',mean_squared_error(y_train, model.predict(X_train_pca)))
-print('SCORE(X_test, y_test):',model.score(X_test_pca, y_test))
-print('SCORE(X_train, y_train):',model.score(X_train_pca, y_train))
-
-# %%
-df_X_TRAIN.corr()
-# %%
-import seaborn as sns
-sns.heatmap(df_X_TRAIN.corr())
-# %%
-sample_phone_test.set_index('sample_id', inplace=True)
-#%%
-df_X_test = pd.merge(phonograms_features_df_test, sample_phone_test, left_index=True, right_index=True)
-sns.heatmap(df_X_test.corr())
-
+X_TRAIN  = df_TRAIN.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'region_id', 'speaker_id'])
+y_TRAIN = df_TRAIN['mean_speed_wpau']
+X_VAL = df_VAL.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'region_id', 'speaker_id'])
+y_VAL = df_VAL['mean_speed_wpau']
 # %% =================== FEATURES SELECTION ===================================
 
-from sklearn.feature_selection import SelectKBest
-
-# Select the K best features
-K = 20
-selector = SelectKBest(k=K)
-X_train_selected = selector.fit_transform(X_train, y_train)
-X_test_selected = selector.transform(X_test)
-model = linear_model.LinearRegression(positive=True)
-model.fit(X_train_selected, y_train)
-y_pred = model.predict(X_test_selected)
-
-selected_features_mask = selector.get_support()
-selected_features = X_train.columns[selected_features_mask]
-
-X_train_selected = X_train[selected_features]
-X_test_selected = X_test[selected_features]
-
-positive = False
-model = linear_model.LinearRegression(positive=positive)
-model.fit(X_train_selected, y_train)
-y_pred = model.predict(X_test_selected)
-
-print('=========SELECTED FEATURES ' + 'K=' + str(K) + ' POSITIVE=' + str(positive) + '=========')
-print('MSE(y_test, y_pred):', mean_squared_error(y_test, y_pred))
-print('MSE(y_train, y_train_pred):', mean_squared_error(y_train, model.predict(X_train_selected)))
-print('SCORE(X_test, y_test):', model.score(X_test_selected, y_test))
-print('SCORE(X_train, y_train):', model.score(X_train_selected, y_train))
-
-# Correlation of the selected features
-#sns.heatmap(X_train_selected.corr())
- 
-# %% =============== FEATURE SELECTION ========================================= 
-ks = np.arange(1,len(df_X_TRAIN.columns)+1, 10)
-
-MSE_k = []
-for k in range(1,len(df_X_TRAIN.columns)+1, 10):
-    print('K=', k, ' of ', len(df_X_TRAIN.columns))
-    selector = SelectKBest(k=round(k))
-    X_train_selected = selector.fit_transform(X_train, y_train)
-    X_test_selected = selector.transform(X_test)
-    model = linear_model.LinearRegression(positive=True)
-    model.fit(X_train_selected, y_train)
-    y_pred = model.predict(X_test_selected)
-
-    MSE_k.append(mean_squared_error(y_test, y_pred))
-
-#%%
-# Do barplot of the features with MSE
-plt.bar(ks, MSE_k)
-# The line is thick
-plt.plot(ks, MSE_k, color='red', linewidth=2)
-plt.xticks(rotation=90)
-# Number of k in x axis
-plt.xlabel('Number of features')
-# MSE in y axis
-plt.ylabel('Mean Squared Error')
-plt.show()
-
-
-
-# %% =================== GROUPS OF FEATURES HAND PICKED ========================
-# Hand picked features
-features_00 = ['mean_all_phonogram']
-features_01 = ['mean_all_phonogram','mean_all_delta', 'mean_all_d_delta', 'std_all_phonogram']
-features_02 = ['mean_all_phonogram','mean_all_delta', 'std_all_phonogram']
-features_03 = ['mean_all_phonogram', 'mean_all_delta']
-
-# Try each feature
-MSE_features = []
-for i in range(4):
-    if i == 0:
-        features_i = features_00
-    elif i == 1:
-        features_i = features_01
-    elif i == 2:
-        features_i = features_02
-    else:
-        features_i = features_03
-    print('Features:', features_i)
-    
-
-
-    
-        
-
-
-    y_TRAIN = df_X_TRAIN['mean_speed_wpau']
-    df_X_TRAIN_fi = df_X_TRAIN[features_i]
-    
-    # Regression
-    X_train, X_test, y_train, y_test = train_test_split(X_TRAIN, y_TRAIN, test_size=0.2)
-    positive=True
-    model = linear_model.LinearRegression(positive=positive)
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    MSE_features.append(mean_squared_error(y_test, y_pred))
-
-# Do barplot of the features with MSE
-plt.bar(np.arange(4), MSE_features)
-
-# Matrix of correlation
-
-
-# %% ==================== FAMILY OF FEATURES ============================= 
 A = ['mean_all_phonogram']
 B = ['mean_all_delta']
 C = ['mean_all_d_delta']
@@ -506,6 +368,7 @@ G = ['mean_how_many_phones']
 
 features = [A,B,C,D,E,F,G]
 MSE_features = np.zeros(len(features))
+scores = np.zeros(len(features))
 for j in range(50):
     for i in range(len(features)):
         print('Features:', features[i])
@@ -519,12 +382,15 @@ for j in range(50):
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         MSE_features[i] += mean_squared_error(y_test, y_pred)
+        scores[i] += model.score(X_test, y_test)
 
+mean_score_features = scores/50
 mean_MSE_features = MSE_features/50
 
 #%% Now the same but with without pauses
 y_TRAIN = df_X_TRAIN['mean_speed_wopau']
 MSE_features = np.zeros(len(features))
+scores = np.zeros(len(features))
 for j in range(50):
     for i in range(len(features)):
         print('Features:', features[i])
@@ -537,21 +403,23 @@ for j in range(50):
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         MSE_features[i] += mean_squared_error(y_test, y_pred)
-
+        scores[i] += model.score(X_test, y_test)
+mean_score_features_wopau = scores/50
 mean_MSE_features_wopau = MSE_features/50
 #%%
 # Do barplot of the features with MSE add one next to the other
 x = np.arange(len(features))
 width = 0.35  # the width of the bars
 fig, ax = plt.subplots()
-rects1 = ax.bar(x - width/2, mean_MSE_features, width, label='Whith pauses')
-rects2 = ax.bar(x + width/2, mean_MSE_features_wopau, width, label='Without pauses')
-plt.xticks(np.arange(len(features)), ['Mean Phonogram','Mean Delta Phonogram','Mean DDelta Pronogram','STD Phonogram','ABS Delta Phonogram','Features Each Phone','OUR Feature']
+rects1 = ax.bar(x - width/2, mean_score_features, width, label='Whith pauses')
+rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='Without pauses')
+plt.xticks(np.arange(len(features)), ['Mean Phonogram' + str(len(A)),'Mean Delta Phonogram'+ str(len(B)),'Mean DDelta Pronogram'+ str(len(C)),'STD Phonogram'+ str(len(D)),'ABS Delta Phonogram'+ str(len(E)),'Features Each Phone'+ str(len(F)),'OUR Feature'+ str(len(G))]
            , rotation=50)
 
 # Add in this plot the name of each feature
+plt.title('Prediction of the speech rate')
 plt.xlabel('Groups of features')
-plt.ylabel('Mean Squared Error')
+plt.ylabel('Mean R2 - 50 iterations')
 plt.legend()
 plt.show()
 

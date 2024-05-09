@@ -181,7 +181,7 @@ def plot_speed_by_phone(sample, SR=16000):
     time = np.arange(amount_of_time) / SR
     plt.plot(time, time_of_phone)
     plt.xlabel('Time (s)')
-    plt.ylabel('Words')
+    plt.ylabel('Speed')
     plt.title('Phone Speed in Time Domain')
 
     return time, time_of_phone
