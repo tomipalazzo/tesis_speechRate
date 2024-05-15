@@ -79,6 +79,9 @@ print(phonemes)
 # Audio by my own: 
 audio_file = '../tesis_speechRate/audios_tomas/she_has_your.wav'  # Replace with the path to your audio file
 waveform, sample_rate = librosa.load(audio_file, sr=None)
+# Play audio
+
+
 x = torch.tensor(np.array([waveform]).astype(np.float32))
 with torch.no_grad():
     y = modelo(x)
@@ -88,7 +91,7 @@ with torch.no_grad():
 y = y.numpy()[0].T
 y_softmax = y_softmax.numpy()[0].T
 
-y_softmax[0,:] = 1
+#y_softmax[0,:] = 1
 plt.figure(figsize=(10, 7))
 plt.pcolor(y_softmax)
 plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
@@ -181,6 +184,7 @@ def phonogram_to_features(sample_ID, train=True):
     dic['region_id'] =  DR_ID
     dic['speaker_id'] = speaker_ID
     
+    # TODO: Vectorizar al estilo numpy
     for j in range(1,42): # 42 is the number of phonemes / It starts from 1 because the first column is the [SIL] phoneme
         dic['mean_phone_' + str(j+1)] = np.mean(phonogram[j,:])
         dic['mean_delta_' + str(j+1)] = np.mean(delta[j,:])
@@ -198,8 +202,9 @@ def phonogram_to_features(sample_ID, train=True):
     dic['abs_all_phonogram'] = np.mean(np.abs(phonogram))
     dic['abs_all_delta'] = np.mean(np.abs(delta))
     dic['abs_all_d_delta'] = np.mean(np.abs(d_delta))
-    dic['mean_how_many_phones'] = mean_phones(phonogram)
-
+    mean_phones_argMax, mean_probables_phones = mean_phones_features(phonogram)
+    dic['mean_how_many_phones_argMax'] = mean_phones_argMax
+    dic['mean_how_many_probables_phones'] = mean_probables_phones 
     features = pd.DataFrame(dic, index=[0])
     return features
 
@@ -227,34 +232,51 @@ def softmax_phonogram(phonogram):
 
 def how_many_phones_since_t(phonogram, t=0):
     T = phonogram.shape[1]
-
+    
     if t == 0:
         t = T
 
-    phonogram_softmax = softmax_phonogram(phonogram)
-
-    
-    phonogram_softmax = phonogram_softmax > 0.5
-
-    s = np.zeros(T)
+    s = np.zeros(t)
     how_many_until_i = 0
 
     argmax = -1
-    for i in range(T):
-        arg_max_new = np.argmax(phonogram_softmax[:,i])
+    for i in range(t):
+        arg_max_new = np.argmax(phonogram[:,i])
         is_a_silence = arg_max_new == 0
         is_a_new_phone = arg_max_new != argmax 
 
         if (is_a_new_phone) and (not is_a_silence):
             argmax = arg_max_new
             how_many_until_i += 1
-            s[i] = how_many_until_i
-    return how_many_until_i
+        s[i] = how_many_until_i
+    return how_many_until_i,s
         
-def mean_phones(phonogram):
-    how_many_phones = how_many_phones_since_t(phonogram)
+def mean_phones_features(phonogram):
+    how_many_phones_argMax = how_many_phones_since_t(phonogram)[0]
+    how_many_probables_phone = how_many_probables_phones(phonogram)[0]
     T = phonogram.shape[1]/100 # 100 is the number of frames per second
-    return how_many_phones/T
+    return how_many_phones_argMax/T, how_many_probables_phone/T
+
+def how_many_probables_phones(phonogram, t=0):
+    T = phonogram.shape[1]
+    if t == 0:
+        t = T
+    phonogram_softmax = softmax_phonogram(phonogram)
+    phonogram_softmax = phonogram_softmax > 0.5
+    s = np.zeros(t)
+    how_many_until_i = 0
+    argmax = -1
+    for i in range(t):
+        arg_max_new = np.argmax(phonogram[:,i])
+        is_a_silence = arg_max_new == 0
+        is_a_new_phone = arg_max_new != argmax 
+
+        if (is_a_new_phone) and (not is_a_silence):
+            argmax = arg_max_new
+            how_many_until_i += 1
+        s[i] = how_many_until_i
+    
+    return how_many_until_i, s
 
 #%% Test the functions
 SAMPLE_ID = SAMPLE_IDs_TRAIN[0]
@@ -279,8 +301,9 @@ plt.title('Phonogram')
 #%%
 
 #how_many_phones_since_t(phonogram)
-print(how_many_phones_since_t(phonogram))
-mean_phones(phonogram)
+print(how_many_phones_since_t(phonogram)[1])
+#mean_phones_arg_max(phonogram)
+how_many_probables_phones(phonogram)[0]
 
 #%% -------------------------- GENERATE PHONOGRAMS -----------------------------
 # OBS: This process takes a long time. It save the phonograms as csv files in the data_phonograms folder 
@@ -340,14 +363,14 @@ df_VAL = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(speaker_id_val)]
 
 
 # %% TRAIN SET
-X_TRAIN  = df_TRAIN.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'region_id', 'speaker_id'])
+X_TRAIN  = df_TRAIN.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'duration_wpau','region_id', 'speaker_id'])
 y_TRAIN = df_TRAIN['mean_speed_wpau']
-X_VAL = df_VAL.drop(columns=['mean_speed_wpau', 'mean_speed_wopau', 'region_id', 'speaker_id'])
+X_VAL = df_VAL.drop(columns=['mean_speed_wpau', 'mean_speed_wopau','duration_wpau', 'region_id', 'speaker_id'])
 y_VAL = df_VAL['mean_speed_wpau']
 # %% =================== FEATURES SELECTION ===================================
 
-A = ['mean_all_phonogram']
-B = ['mean_all_delta']
+A = ['mean_all_phonogram'] # No explica - sacarla - Sumar A B C
+B = ['mean_all_delta'] 
 C = ['mean_all_d_delta']
 D = ['std_all_phonogram']
 E = ['abs_all_delta']
@@ -360,61 +383,70 @@ for i in range(2,42):
     F.append('std_d_delta_' + str(i))
     F.append('abs_mean_phone_' + str(i))
     F.append('abs_mean_delta_' + str(i))
+    
 
 #%% NEW FEATURES
-G = ['mean_how_many_phones']
+G = ['mean_how_many_phones_argMax']
+H = ['mean_how_many_probables_phones']
 
+mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
 #%% Regression by groups
+y_TRAIN = df_TRAIN['mean_speed_wpau']
+y_VAL = df_VAL['mean_speed_wpau']
 
-features = [A,B,C,D,E,F,G]
-MSE_features = np.zeros(len(features))
-scores = np.zeros(len(features))
+features = [A,B,C,D,E,F,G, H]
+MSE_features_wpau = np.zeros(len(features))
+scores_wpau = np.zeros(len(features))
 for j in range(50):
     for i in range(len(features)):
         print('Features:', features[i])
-        y_TRAIN = df_X_TRAIN['mean_speed_wpau']
-        df_X_TRAIN_fi = df_X_TRAIN[features[i]]
+        X_TRAIN_fi = X_TRAIN[features[i]]
+        X_VAL_fi = X_VAL[features[i]]
         
         # Regression
-        X_train, X_test, y_train, y_test = train_test_split(df_X_TRAIN_fi, y_TRAIN, test_size=0.2)
         positive=True
         model = linear_model.LinearRegression(positive=positive)
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        MSE_features[i] += mean_squared_error(y_test, y_pred)
-        scores[i] += model.score(X_test, y_test)
+        model.fit(X_TRAIN_fi, y_TRAIN)
+        y_pred = model.predict(X_VAL_fi)
+        MSE_features_wpau[i] += mean_squared_error(y_VAL, y_pred)
+        scores_wpau[i] += model.score(X_VAL_fi, y_VAL)
 
-mean_score_features = scores/50
-mean_MSE_features = MSE_features/50
+mean_score_features_wpau = scores_wpau/50
+mean_MSE_features_wpau = MSE_features_wpau/50
 
 #%% Now the same but with without pauses
-y_TRAIN = df_X_TRAIN['mean_speed_wopau']
-MSE_features = np.zeros(len(features))
-scores = np.zeros(len(features))
+y_TRAIN = df_TRAIN['mean_speed_wopau']
+y_VAL = df_VAL['mean_speed_wopau']
+MSE_features_wopau = np.zeros(len(features))
+scores_wopau = np.zeros(len(features))
 for j in range(50):
     for i in range(len(features)):
         print('Features:', features[i])
-        df_X_TRAIN_fi = df_X_TRAIN[features[i]]
+        X_TRAIN_fi = X_TRAIN[features[i]]
+        X_VAL_fi = X_VAL[features[i]]
         
         # Regression
-        X_train, X_test, y_train, y_test = train_test_split(df_X_TRAIN_fi, y_TRAIN, test_size=0.2)
         positive=True
         model = linear_model.LinearRegression(positive=positive)
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        MSE_features[i] += mean_squared_error(y_test, y_pred)
-        scores[i] += model.score(X_test, y_test)
-mean_score_features_wopau = scores/50
-mean_MSE_features_wopau = MSE_features/50
+        model.fit(X_TRAIN_fi, y_TRAIN)
+        y_pred = model.predict(X_VAL_fi)
+        MSE_features_wopau[i] += mean_squared_error(y_VAL, y_pred)
+        scores_wopau[i] += model.score(X_VAL_fi, y_VAL)
+
+mean_score_features_wopau = scores_wopau/50
+mean_MSE_features_wopau = MSE_features_wopau/50
+
+
 #%%
 # Do barplot of the features with MSE add one next to the other
 x = np.arange(len(features))
 width = 0.35  # the width of the bars
 fig, ax = plt.subplots()
-rects1 = ax.bar(x - width/2, mean_score_features, width, label='Whith pauses')
+rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses')
 rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='Without pauses')
-plt.xticks(np.arange(len(features)), ['Mean Phonogram' + str(len(A)),'Mean Delta Phonogram'+ str(len(B)),'Mean DDelta Pronogram'+ str(len(C)),'STD Phonogram'+ str(len(D)),'ABS Delta Phonogram'+ str(len(E)),'Features Each Phone'+ str(len(F)),'OUR Feature'+ str(len(G))]
-           , rotation=50)
+plt.xticks(np.arange(len(features)), ['Mean Phonogram' + str(len(A)),'Mean Delta Phonogram'+ str(len(B)),'Mean DDelta Pronogram'+ str(len(C)),'STD Phonogram'+ str(len(D)),
+                                      'ABS Delta Phonogram'+ str(len(E)),'Features Each Phone'+ str(len(F)),'OUR Feature'+ str(len(G)), 'G+H']
+           , rotation=70)
 
 # Add in this plot the name of each feature
 plt.title('Prediction of the speech rate')
@@ -426,10 +458,12 @@ plt.show()
 
 # %% Correlation Matrix
 
-ALL_FEATURES = A + B + C + D + E + F + G
+ALL_FEATURES = A + B + C + D + E + G + H
 X_TRAIN_ALL = X_TRAIN[ALL_FEATURES]
 sns.heatmap(X_TRAIN_ALL.corr())
 
 
 
+# %% 
+sns.heatmap(mean_phone.corr())
 # %%

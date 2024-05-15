@@ -241,42 +241,40 @@ def duration(x, DF=16000):
 def mean_speed(x):
 
     silence = ['pau', 'epi', 'h#']
-    # data = x['utterance']
-    # start = x['start']
-    # stop = x['stop']
-
-    # data_interval = np.zeros(len(data))
-    # speed_of_data = np.zeros(len(data))
-
-    # data_interval = stop - start
-    
-    # speed_of_data = 1 /(data_interval / SR)
-
-    
-    # for i in range(len(data)):
-
-    #     if(data[i] in silence):
-    #         speed_of_data[i] = 0
-
-    # mean_speed = np.mean(speed_of_data)
 
     # ## NOTA: tiene que devolver 2 valores, el mean_speed y el mean_speed sin los silencios
 
-    avg_dur_wopau = x.loc[~x["utterance"].isin(silence),:]["duration_s"].mean()
-    avg_speed_wopau = 1/avg_dur_wopau
+    #avg_dur_wopau = x.loc[~x["utterance"].isin(silence),:]["duration_s"].mean()
+    #avg_speed_wopau = 1/avg_dur_wopau
+#
+    #
+    #sum_dur_wopau = x.loc[~x["utterance"].isin(silence),:]["duration_s"].sum() # Excluding the silence
+    #avg_dur_wpau = sum_dur_wopau/len(x.iloc[1:-1]) # Excluding the h# at the beginning and the end
+    #avg_speed_wpau = 1/avg_dur_wpau
 
+    amount_phones = x.loc[~x["utterance"].isin(silence),:].shape[0]
+    duration_wpau = (x['start'].iloc[-1] - x['start'].iloc[1]) / 16000
     
-    sum_dur_wopau = x.loc[~x["utterance"].isin(silence),:]["duration_s"].sum() # Excluding the silence
-    avg_dur_wpau = sum_dur_wopau/len(x.iloc[1:-1]) # Excluding the h# at the beginning and the end
-    avg_speed_wpau = 1/avg_dur_wpau
-        
-    return avg_dur_wopau, avg_speed_wopau, avg_dur_wpau, avg_speed_wpau
+    duration_wopau = x.loc[~x["utterance"].isin(silence),:]['duration_s'].sum()
+
+    avg_speed_wopau = amount_phones/duration_wopau
+    avg_speed_wpau = amount_phones/duration_wpau
+
+    return duration_wopau, avg_speed_wopau, duration_wpau, avg_speed_wpau, amount_phones
+
+def duration_wpau(x):
+    return mean_speed(x)[0]
+def duration_wopau(x):
+    return mean_speed(x)[2]
 
 def avg_speed_wopau(x):    
     return mean_speed(x)[1]
 
 def avg_speed_wpau(x):
     return mean_speed(x)[3]
+
+def amount_phones(x):
+    return mean_speed(x)[4]
 
 # %%
 
@@ -367,6 +365,8 @@ def TIMIT_df_by_sample_phones(df_by_record_of_phones):
     TIMIT_df_samples = pd.DataFrame()
     TIMIT_df_samples["duration_wpau"] = df_by_record_of_phones.groupby("sample_id").apply(duration)
     TIMIT_df_samples["mean_speed_wpau"] = df_by_record_of_phones.groupby("sample_id").apply(avg_speed_wpau)
+    TIMIT_df_samples["duration_wopau"] = df_by_record_of_phones.groupby("sample_id").apply(duration_wopau)
     TIMIT_df_samples["mean_speed_wopau"] = df_by_record_of_phones.groupby("sample_id").apply(avg_speed_wopau)
+    TIMIT_df_samples["amount_phones"] = df_by_record_of_phones.groupby("sample_id").apply(amount_phones)
     return TIMIT_df_samples
 # %%
