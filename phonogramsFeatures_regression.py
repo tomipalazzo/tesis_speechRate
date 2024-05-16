@@ -1,6 +1,6 @@
 #%% #import tables_speechRate as my_tables
 
-#%% TO DO 
+#%% TODO 
 # 1. Identify the silence and call it 'sil' - OK
 # 1.1 Do the necesary changes - OK
 # 2. Do the Pablo's features - OK
@@ -185,16 +185,64 @@ def phonogram_to_features(sample_ID, train=True):
     dic['speaker_id'] = speaker_ID
     
     # TODO: Vectorizar al estilo numpy
-    for j in range(1,42): # 42 is the number of phonemes / It starts from 1 because the first column is the [SIL] phoneme
-        dic['mean_phone_' + str(j+1)] = np.mean(phonogram[j,:])
-        dic['mean_delta_' + str(j+1)] = np.mean(delta[j,:])
-        dic['mean_d_delta_' + str(j+1)] = np.mean(d_delta[j,:])
-        dic['std_phone_' + str(j+1)] = np.std(phonogram[j,:])
-        dic['std_delta_' + str(j+1)] = np.std(delta[j,:])
-        dic['std_d_delta_' + str(j+1)] = np.std(d_delta[j,:])
-        dic['abs_mean_phone_' + str(j+1)] = np.mean(np.abs(phonogram[j,:]))
-        dic['abs_mean_delta_' + str(j+1)] = np.mean(np.abs(delta[j,:]))
-        dic['abs_mean_d_delta_' + str(j+1)] = np.mean(np.abs(d_delta[j,:]))
+
+    # Mean each phonogram
+    means = np.mean(phonogram, axis=1)
+    mean_dic = {f'mean_phone_{i+1}': mean for i, mean in enumerate(means)}
+    dic.update(mean_dic)
+
+    # STD each phonogram
+    stds = np.std(phonogram, axis=1)
+    std_dic = {f'std_phone_{i+1}': std for i, std in enumerate(stds)}
+    dic.update(std_dic)
+    
+    # STD delta each phonogram
+    mean_delta = np.mean(delta, axis=1)
+    mean_delta_dic = {f'mean_delta_phone_{i+1}': mean for i, mean in enumerate(mean_delta)}
+    dic.update(mean_delta_dic)
+
+    # STD delta each phonogram
+    std_delta = np.std(delta, axis=1)
+    std_delta_dic = {f'std_delta_phone_{i+1}': std for i, std in enumerate(std_delta)}
+    dic.update(std_delta_dic)
+
+    # STD delta each phonogram
+    mean_d_delta = np.mean(d_delta, axis=1)
+    mean_d_delta_dic = {f'mean_d_delta_phone_{i+1}': mean for i, mean in enumerate(mean_d_delta)}
+    dic.update(mean_d_delta_dic)
+
+    # STD delta each phonogram
+    std_d_delta = np.std(d_delta, axis=1)
+    std_d_delta_dic = {f'std_d_delta_phone_{i+1}': std for i, std in enumerate(std_d_delta)}
+    dic.update(std_d_delta_dic)
+
+    # Mean absolute value of each phonogram
+    abs_mean_phonogram = np.mean(np.abs(phonogram), axis=1)
+    abs_mean_phonogram_dic = {f'mean_abs_phone_{i+1}': mean for i, mean in enumerate(abs_mean_phonogram)}
+    dic.update(abs_mean_phonogram_dic)
+
+    # Mean absolute value of each delta
+    mean_abs_delta = np.mean(np.abs(delta), axis=1)
+    mean_abs_delta_dic = {f'mean_abs_delta_phone_{i+1}': mean for i, mean in enumerate(mean_abs_delta)}
+    dic.update(mean_abs_delta_dic)
+
+    # Mean absolute value of each delta
+    mean_abs_d_delta = np.mean(np.abs(d_delta), axis=1)
+    mean_abs_d_delta_dic = {f'mean_abs_d_delta_phone_{i+1}': mean for i, mean in enumerate(mean_abs_d_delta)}
+    dic.update(mean_abs_d_delta_dic)
+
+    # Add the feature of softmax
+    feature_softmax = how_many_probables_phones(phonogram)[0]
+    dic_feature_softmax = {f'feature_softmax_{i+1}': feature for i, feature in enumerate(feature_softmax)}
+    dic.update(dic_feature_softmax)
+
+    # Add the mean feature of softmax
+    mean_feature_softmax = how_many_probables_phones(phonogram)[1]
+    dic_mean_feature_softmax = {f'mean_feature_softmax_{i+1}': feature for i, feature in enumerate(mean_feature_softmax)}
+    dic.update(dic_mean_feature_softmax)    
+
+
+    # Means realated of all the phonogram
     dic['mean_all_phonogram'] = np.mean(phonogram)
     dic['mean_all_delta'] = np.mean(delta)
     dic['mean_all_d_delta'] = np.mean(d_delta)
@@ -202,9 +250,9 @@ def phonogram_to_features(sample_ID, train=True):
     dic['abs_all_phonogram'] = np.mean(np.abs(phonogram))
     dic['abs_all_delta'] = np.mean(np.abs(delta))
     dic['abs_all_d_delta'] = np.mean(np.abs(d_delta))
-    mean_phones_argMax, mean_probables_phones = mean_phones_features(phonogram)
-    dic['mean_how_many_phones_argMax'] = mean_phones_argMax
-    dic['mean_how_many_probables_phones'] = mean_probables_phones 
+    
+    
+    
     features = pd.DataFrame(dic, index=[0])
     return features
 
@@ -258,25 +306,22 @@ def mean_phones_features(phonogram):
     return how_many_phones_argMax/T, how_many_probables_phone/T
 
 def how_many_probables_phones(phonogram, t=0):
+    number_of_phones = 42
     T = phonogram.shape[1]
     if t == 0:
         t = T
     phonogram_softmax = softmax_phonogram(phonogram)
     phonogram_softmax = phonogram_softmax > 0.5
-    s = np.zeros(t)
-    how_many_until_i = 0
-    argmax = -1
-    for i in range(t):
-        arg_max_new = np.argmax(phonogram[:,i])
-        is_a_silence = arg_max_new == 0
-        is_a_new_phone = arg_max_new != argmax 
-
-        if (is_a_new_phone) and (not is_a_silence):
-            argmax = arg_max_new
-            how_many_until_i += 1
-        s[i] = how_many_until_i
     
-    return how_many_until_i, s
+    d_phonogram_softmax = np.diff(phonogram_softmax, axis=1)
+
+    res  = np.zeros(number_of_phones)
+    for i in range(number_of_phones):
+        res[i] = np.sum(d_phonogram_softmax[i,:])
+
+    
+
+    return res, res/t
 
 #%% Test the functions
 SAMPLE_ID = SAMPLE_IDs_TRAIN[0]
@@ -312,7 +357,7 @@ how_many_probables_phones(phonogram)[0]
 N_TRAIN = len(TIMIT_train)
 N_TEST = len(TIMIT_test)
 
-#get_phonograms(TIMIT_train, modelo, N_TRAIN, train=True)
+#get_phonograms(TIMIT_train, modelo, 10, train=True)
 
 
 
@@ -377,24 +422,34 @@ E = ['abs_all_delta']
 
 #%% ALl PHONES FEATURES
 F = []
-for i in range(2,42):
-    F.append('mean_phone_' + str(i))
-    F.append('std_phone_' + str(i))
-    F.append('std_d_delta_' + str(i))
-    F.append('abs_mean_phone_' + str(i))
-    F.append('abs_mean_delta_' + str(i))
+F_mean = ['mean_phone_' + str(i) for i in range(2, 40)]
+F_std = ['std_phone_' + str(i) for i in range(2, 40)]
+F_mean_delta = ['mean_delta_phone_' + str(i) for i in range(2, 40)]
+F_std_delta = ['std_delta_phone_' + str(i) for i in range(2, 40)]   
+F_mean_d_delta = ['mean_d_delta_phone_' + str(i) for i in range(2, 40)]
+F_std_d_delta = ['std_d_delta_phone_' + str(i) for i in range(2, 40)]
+F_abs = ['mean_abs_phone_' + str(i) for i in range(2, 40)]
+F_abs_delta = ['mean_abs_delta_phone_' + str(i) for i in range(2, 40)]
+F_abs_d_delta = ['mean_abs_d_delta_phone_' + str(i) for i in range(2, 40)]
+F_softmax = ['feature_softmax_' + str(i) for i in range(2, 40)]
+F_mean_softmax = ['mean_feature_softmax_' + str(i) for i in range(2, 40)]
+
+
+
+F = F + F_mean + F_std + F_abs + F_mean_delta + F_std_delta + F_abs_delta + F_mean_d_delta + F_std_d_delta + F_abs_d_delta + F_softmax + F_mean_softmax
+
     
 
 #%% NEW FEATURES
-G = ['mean_how_many_phones_argMax']
-H = ['mean_how_many_probables_phones']
+#G = ['mean_how_many_phones_argMax']
+#H = ['mean_how_many_probables_phones']
 
 mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
 #%% Regression by groups
 y_TRAIN = df_TRAIN['mean_speed_wpau']
 y_VAL = df_VAL['mean_speed_wpau']
 
-features = [A,B,C,D,E,F,G, H]
+features = [A,B,C,D,E,F]
 MSE_features_wpau = np.zeros(len(features))
 scores_wpau = np.zeros(len(features))
 for j in range(50):
@@ -445,7 +500,7 @@ fig, ax = plt.subplots()
 rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses')
 rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='Without pauses')
 plt.xticks(np.arange(len(features)), ['Mean Phonogram' + str(len(A)),'Mean Delta Phonogram'+ str(len(B)),'Mean DDelta Pronogram'+ str(len(C)),'STD Phonogram'+ str(len(D)),
-                                      'ABS Delta Phonogram'+ str(len(E)),'Features Each Phone'+ str(len(F)),'OUR Feature'+ str(len(G)), 'G+H']
+                                      'ABS Delta Phonogram'+ str(len(E)),'Features Each Phone'+ str(len(F))]
            , rotation=70)
 
 # Add in this plot the name of each feature
@@ -458,9 +513,11 @@ plt.show()
 
 # %% Correlation Matrix
 
-ALL_FEATURES = A + B + C + D + E + G + H
+ALL_FEATURES = F
 X_TRAIN_ALL = X_TRAIN[ALL_FEATURES]
 sns.heatmap(X_TRAIN_ALL.corr())
+plt.title('Correlation Matrix of the features')
+
 
 
 

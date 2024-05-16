@@ -1,5 +1,5 @@
 
-# TODO Hacer la velocidad instantanea como figura en la tesis
+
 #%% Importing libraries
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -202,16 +202,28 @@ def window_regression_v2(t_phones, step_size=10, window_size=100, with_pau = Fal
 
 #%% TEST WINDOW V2
 
+step_size = 1/4     #seg
+window_size = 1/2   #seg
+with_pause = False
+
 sample1 = TIMIT_df_by_record.phone_train[TIMIT_df_by_record.phone_train['sample_id'] == 'DR1_CJF0_SA1']
-x, y, c1, c2, c3 = window_regression_v2(sample1, step_size=16000/64, window_size=16000/4, with_pau=True)
+x, y, c1, c2, c3 = window_regression_v2(sample1, step_size=step_size*1600, window_size=window_size*16000, with_pau=with_pause)
 #%%
 plt.plot(x,y)      
 plt.ylim(0,max(y)+3) 
-plt.title('Speech rate by window. Window size: 1s, step size: 0.5s')
+plt.title('Speech rate by window')
 plt.xlabel('Time (s)')
 plt.ylabel('Speech rate (phones/s)')
+# Add the window size and step size in the legend
+plt.legend(['Window size: '+str(window_size)+'s, Step size: '+str(step_size)+'s'+', with pause: '+str(with_pause)])
+plt.grid()
+# Save image
+plt.savefig('speech_rate_window_ws='+str(window_size)+'_ss='+str(step_size)+'_with_pause='+str(with_pause)+'.png')
+
 print(c1,c2,c3)
-# %%
+
+
+#%%
 y_hat, x_axis = window_regression(X, y,step_size=16000/2, window_size=16000)
 # %%
 plt.scatter(X,y)
