@@ -1,3 +1,5 @@
+
+# TODO Hacer la velocidad instantanea como figura en la tesis
 #%% Importing libraries
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -155,8 +157,62 @@ def window_regression(X,y, step_size=10, window_size=100):
     
     return y_hat, x_axis
 
+
+def window_regression_v2(t_phones, step_size=10, window_size=100, with_pau = False):
+    """
+    This function makes a windowed regression of the data X and y. The window size is the number of points that the 
+    regression will take into account. The step size is the number of points that the window will move in each iteration.
+    """
+    # Initialize the variables
+    n = t_phones.shape[0]
+    large = t_phones['stop'][n-1]
+    steps = np.arange(0,large,step_size)
+    y_hat = np.zeros(len(steps))
+
+    # Indicators 
+    how_many_completely = 0
+    how_many_partialy = 0 
+    how_many_out = 0
+    
+    silence = ['h#', 'pau', 'epi']
+
+    for i in range(len(steps)):
+        left = max(0, steps[i]-window_size/2)
+        right = min(large-1,steps[i]+window_size/2)
+        
+        for phone_i in range(1,n-1):
+            is_silence = t_phones['utterance'][phone_i] in silence
+            if (not is_silence) or (with_pau):
+
+
+                is_completely_in_window = (t_phones['start'][phone_i] > left) and (t_phones['stop'][phone_i] < right)
+                is_completely_out_of_window = (t_phones['start'][phone_i]> right) or (t_phones['stop'][phone_i] < left)
+                is_completely_out_of_window = True
+                if is_completely_in_window:
+                    y_hat[i] += 1/2
+                    how_many_completely += 1
+                elif not is_completely_out_of_window:
+                    y_hat[i] += 1/2
+                    how_many_partialy += 1
+                else:
+                    how_many_out += 1
+                
+    print(len(steps), len(range(len(steps))))
+    return steps/16000, y_hat, how_many_completely, how_many_partialy, how_many_out
+
+#%% TEST WINDOW V2
+
+sample1 = TIMIT_df_by_record.phone_train[TIMIT_df_by_record.phone_train['sample_id'] == 'DR1_CJF0_SA1']
+x, y, c1, c2, c3 = window_regression_v2(sample1, step_size=16000/64, window_size=16000/4, with_pau=True)
+#%%
+plt.plot(x,y)      
+plt.ylim(0,max(y)+3) 
+plt.title('Speech rate by window. Window size: 1s, step size: 0.5s')
+plt.xlabel('Time (s)')
+plt.ylabel('Speech rate (phones/s)')
+print(c1,c2,c3)
 # %%
-y_hat, x_axis = window_regression(X, y,step_size=50, window_size=10)
+y_hat, x_axis = window_regression(X, y,step_size=16000/2, window_size=16000)
 # %%
 plt.scatter(X,y)
 plt.plot(x_axis, y_hat, color='red')
