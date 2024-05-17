@@ -85,9 +85,11 @@ TIMIT_df_by_record.phone_test.groupby("sample_id")["duration_s"].sum()
 
 # %% Make a DF with the information of the samples
 
+t0 = time.time()
 TIMIT_df_by_sample_train = ut.TIMIT_df_by_sample_phones(TIMIT_df_by_record.phone_train)
 TIMIT_df_by_sample_test = ut.TIMIT_df_by_sample_phones(TIMIT_df_by_record.phone_test)
-
+t1 = time.time()
+print('Time: ', t1-t0)
 # %% Print the first 5 rows of the samples
 TIMIT_df_by_sample_train.head()
 
