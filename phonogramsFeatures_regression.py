@@ -254,6 +254,9 @@ def phonogram_to_features(sample_ID, train=True):
     
     
     features = pd.DataFrame(dic, index=[0])
+    # Save the features as a csv file
+    
+    
     return features
 
 def phonograms_to_features(sample_IDs, train = True):
@@ -323,32 +326,8 @@ def how_many_probables_phones(phonogram, t=0):
 
     return res, res/t
 
-#%% Test the functions
-SAMPLE_ID = SAMPLE_IDs_TRAIN[0]
-# read the phonogram
-phonogram = pd.read_csv('../tesis_speechRate/data_phonograms/CHARSIU/Train/'+SAMPLE_ID+'.csv')
 
-plt.figure(figsize=(10, 7))
-plt.pcolor(phonogram)
-plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
-plt.title('Phonogram')
-plt.colorbar()
-plt.show()
 
-phonogram = phonogram.to_numpy()
-phonogram_softmax = softmax_phonogram(phonogram)
-phonogram_softmax = phonogram_softmax > 0.5
-plt.figure(figsize=(10, 7))
-plt.pcolor(phonogram_softmax)
-plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
-plt.colorbar()
-plt.title('Phonogram')
-#%%
-
-#how_many_phones_since_t(phonogram)
-print(how_many_phones_since_t(phonogram)[1])
-#mean_phones_arg_max(phonogram)
-how_many_probables_phones(phonogram)[0]
 
 #%% -------------------------- GENERATE PHONOGRAMS -----------------------------
 # OBS: This process takes a long time. It save the phonograms as csv files in the data_phonograms folder 
@@ -372,7 +351,34 @@ SAMPLE_IDs_TRAIN = get_sample_IDs(TIMIT_train, N_TRAIN)
 SAMPLE_IDs_TEST = get_sample_IDs(TIMIT_test, N_TEST)
 
 
+# ------------------------------- TEST FUNCTIONS --------------------------------------
+#%% Test the functions
+SAMPLE_ID = SAMPLE_IDs_TRAIN[0]
+# read the phonogram
+phonogram = pd.read_csv('../tesis_speechRate/data_phonograms/CHARSIU/Train/'+SAMPLE_ID+'.csv')
 
+plt.figure(figsize=(10, 7))
+plt.pcolor(phonogram)
+plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+plt.title('Phonogram')
+plt.colorbar()
+plt.show()
+
+phonogram = phonogram.to_numpy()
+phonogram_softmax = softmax_phonogram(phonogram)
+phonogram_softmax = phonogram_softmax > 0.5
+plt.figure(figsize=(10, 7))
+plt.pcolor(phonogram_softmax)
+plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+plt.colorbar()
+plt.title('Phonogram')
+
+#%%
+
+#how_many_phones_since_t(phonogram)
+print(how_many_phones_since_t(phonogram)[1])
+#mean_phones_arg_max(phonogram)
+how_many_probables_phones(phonogram)[0]
 
 #%% -------------------------- GENERATE FEATURES -----------------------------
 
@@ -438,7 +444,7 @@ F_mean_softmax = ['mean_feature_softmax_' + str(i) for i in range(2, 40)]
 
 F = F + F_mean + F_std + F_abs + F_mean_delta + F_std_delta + F_abs_delta + F_mean_d_delta + F_std_d_delta + F_abs_d_delta + F_softmax + F_mean_softmax
 
-    
+G = F_mean_softmax
 
 #%% NEW FEATURES
 #G = ['mean_how_many_phones_argMax']
@@ -449,7 +455,7 @@ mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
 y_TRAIN = df_TRAIN['mean_speed_wpau']
 y_VAL = df_VAL['mean_speed_wpau']
 
-features = [A,B,C,D,E,F]
+features = [A,B,C,D,E,F, G]
 MSE_features_wpau = np.zeros(len(features))
 scores_wpau = np.zeros(len(features))
 for j in range(50):
@@ -500,7 +506,7 @@ fig, ax = plt.subplots()
 rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses')
 rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='Without pauses')
 plt.xticks(np.arange(len(features)), ['Mean Phonogram' + str(len(A)),'Mean Delta Phonogram'+ str(len(B)),'Mean DDelta Pronogram'+ str(len(C)),'STD Phonogram'+ str(len(D)),
-                                      'ABS Delta Phonogram'+ str(len(E)),'Features Each Phone'+ str(len(F))]
+                                      'ABS Delta Phonogram'+ str(len(E)),'Features Each Phone'+ str(len(F)),'our feature']
            , rotation=70)
 
 # Add in this plot the name of each feature
@@ -523,4 +529,13 @@ plt.title('Correlation Matrix of the features')
 
 # %% 
 sns.heatmap(mean_phone.corr())
+# %%
+
+
+X_TRAIN
+# %% 
+sns.pairplot(pd.concat([X_TRAIN.filtermean_speed_wopau(regex='all_*'),y_TRAIN],axis=1), hue="mean_speed_wopau", palette="husl")
+
+
+# %%
 # %%
