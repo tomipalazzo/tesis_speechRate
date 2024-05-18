@@ -468,16 +468,18 @@ D = ['greedy_feature']
 #%% NEW FEATURES
 #G = ['mean_how_many_phones_arFgMax']
 #H = ['mean_how_many_probables_phones']
+N = 10
+
 
 mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
 #%% Metric 1
 y_TRAIN = df_TRAIN['mean_speed_wpau_m1']
 y_VAL = df_VAL['mean_speed_wpau_m1']
 
-features = [A,F, G, H]
+features = [A,B, C, D]
 MSE_features_wpau = np.zeros(len(features))
 scores_wpau = np.zeros(len(features))
-for j in range(10):
+for j in range(N):
     for i in range(len(features)):
         print('Features:', features[i])
         X_TRAIN_fi = X_TRAIN[features[i]]
@@ -491,15 +493,15 @@ for j in range(10):
         MSE_features_wpau[i] += mean_squared_error(y_VAL, y_pred)
         scores_wpau[i] += model.score(X_VAL_fi, y_VAL)
 
-mean_score_features_wpau = scores_wpau/10
-mean_MSE_features_wpau = MSE_features_wpau/10
+mean_score_features_wpau = scores_wpau/N
+mean_MSE_features_wpau = MSE_features_wpau/N
 
 #%% Metric 2
 y_TRAIN = df_TRAIN['mean_speed_wpau_m2']
 y_VAL = df_VAL['mean_speed_wpau_m2']
 MSE_features_wopau = np.zeros(len(features))
 scores_wopau = np.zeros(len(features))
-for j in range(10):
+for j in range(N):
     for i in range(len(features)):
         print('Features:', features[i])
         X_TRAIN_fi = X_TRAIN[features[i]]
@@ -513,8 +515,8 @@ for j in range(10):
         MSE_features_wopau[i] += mean_squared_error(y_VAL, y_pred)
         scores_wopau[i] += model.score(X_VAL_fi, y_VAL)
 
-mean_score_features_wopau = scores_wopau/10
-mean_MSE_features_wopau = MSE_features_wopau/10
+mean_score_features_wopau = scores_wopau/N
+mean_MSE_features_wopau = MSE_features_wopau/N
 
 
 #%%
@@ -537,7 +539,7 @@ plt.show()
 
 # %% Correlation Matrix
 
-ALL_FEATURES = F
+ALL_FEATURES = A + B + C + D
 X_TRAIN_ALL = X_TRAIN[ALL_FEATURES]
 sns.heatmap(X_TRAIN_ALL.corr())
 plt.title('Correlation Matrix of the features')
@@ -554,16 +556,5 @@ X_TRAIN
 # %% 
 sns.pairplot(pd.concat([X_TRAIN.filtermean_speed_wopau(regex='all_*'),y_TRAIN],axis=1), hue="mean_speed_wopau", palette="husl")
 
-
-# %%
-# %%
-# PCA
-from sklearn.decomposition import PCA
-pca = PCA(n_components=2)
-X_pca = pca.fit_transform(X_TRAIN[ALL_FEATURES])
-plt.scatter(X_pca[:,0], X_pca[:,1], c=y_TRAIN)
-plt.colorbar()
-#score
-pca.score(X_VAL[ALL_FEATURES], y_VAL)
 
 # %%
