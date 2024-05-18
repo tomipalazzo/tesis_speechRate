@@ -244,13 +244,13 @@ def phonogram_to_features(sample_ID, train=True):
 
 
     # Means realated of all the phonogram
-    dic['mean_all_phonogram'] = np.mean(phonogram)
-    dic['mean_all_delta'] = np.mean(delta)
-    dic['mean_all_d_delta'] = np.mean(d_delta)
-    dic['std_all_phonogram'] = np.std(phonogram)
-    dic['abs_all_phonogram'] = np.mean(np.abs(phonogram))
-    dic['abs_all_delta'] = np.mean(np.abs(delta))
-    dic['abs_all_d_delta'] = np.mean(np.abs(d_delta))
+    dic['all_mean_phonogram'] = np.mean(phonogram)
+    dic['all_mean_delta'] = np.mean(delta)
+    dic['all_mean_d_delta'] = np.mean(d_delta)
+    dic['all_std_phonogram'] = np.std(phonogram)
+    dic['all_mean_abs_phonogram'] = np.mean(np.abs(phonogram))
+    dic['all_mean_abs_delta'] = np.mean(np.abs(delta))
+    dic['all_mean_abs_d_delta'] = np.mean(np.abs(d_delta))
     
     dic['greedy_feature'] = greedy_feature(phonogram)[0]
     
@@ -305,13 +305,16 @@ def greedy_feature(phonogram, t=0):
             argmax = arg_max_new
             how_many_until_i += 1
         s[i] = how_many_until_i
-    return how_many_until_i,s
+    
+    mean_most_probable_phones = how_many_until_i/t
+
+    return mean_most_probable_phones,s
         
-def mean_phones_features(phonogram):
-    how_many_phones_argMax = how_many_phones_since_t(phonogram)[0]
-    how_many_probables_phone = how_many_probables_phones(phonogram)[0]
-    T = phonogram.shape[1]/100 # 100 is the number of frames per second
-    return how_many_phones_argMax/T, how_many_probables_phone/T
+#def mean_phones_features(phonogram):
+#    how_many_phones_argMax = how_many_phones_since_t(phonogram)[0]
+#    how_many_probables_phone = how_many_probables_phones(phonogram)[0]
+#    T = phonogram.shape[1]/100 # 100 is the number of frames per second
+#    return how_many_phones_argMax/T, how_many_probables_phone/T
 
 def how_many_probables_phones(phonogram, t=0):
     number_of_phones = 42
@@ -381,7 +384,7 @@ plt.title('Phonogram')
 #%%
 
 #how_many_phones_since_t(phonogram)
-print(how_many_phones_since_t(phonogram)[1])
+#print(how_many_phones_since_t(phonogram)[1])
 #mean_phones_arg_max(phonogram)
 how_many_probables_phones(phonogram)[0]
 
@@ -430,33 +433,37 @@ X_VAL = df_VAL.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_m1', 'm
 y_VAL = df_VAL['mean_speed_wpau_m1']
 # %% =================== FEATURES SELECTION ===================================
 
-A = ['mean_all_phonogram'] # No explica - sacarla - Sumar A B C
-B = ['mean_all_delta'] 
-C = ['mean_all_d_delta']
-D = ['std_all_phonogram']
-E = ['abs_all_delta']
+A = ['all_mean_phonogram', 
+     'all_mean_delta', 
+     'all_mean_d_delta', 
+     'all_std_phonogram',
+     'all_mean_abs_phonogram',
+     'all_mean_abs_delta',
+     'all_mean_abs_d_delta'] 
+
+
 
 #%% ALl PHONES FEATURES
-F = []
-F_mean = ['mean_phone_' + str(i) for i in range(2, 40)]
-F_std = ['std_phone_' + str(i) for i in range(2, 40)]
-F_mean_delta = ['mean_delta_phone_' + str(i) for i in range(2, 40)]
-F_std_delta = ['std_delta_phone_' + str(i) for i in range(2, 40)]   
-F_mean_d_delta = ['mean_d_delta_phone_' + str(i) for i in range(2, 40)]
-F_std_d_delta = ['std_d_delta_phone_' + str(i) for i in range(2, 40)]
-F_abs = ['mean_abs_phone_' + str(i) for i in range(2, 40)]
-F_abs_delta = ['mean_abs_delta_phone_' + str(i) for i in range(2, 40)]
-F_abs_d_delta = ['mean_abs_d_delta_phone_' + str(i) for i in range(2, 40)]
-F_softmax = ['feature_softmax_' + str(i) for i in range(2, 40)]
-F_mean_softmax = ['mean_feature_softmax_' + str(i) for i in range(2, 40)]
+B = []
+B_mean = ['mean_phone_' + str(i) for i in range(2, 40)]
+B_std = ['std_phone_' + str(i) for i in range(2, 40)]
+B_mean_delta = ['mean_delta_phone_' + str(i) for i in range(2, 40)]
+B_std_delta = ['std_delta_phone_' + str(i) for i in range(2, 40)]   
+B_mean_d_delta = ['mean_d_delta_phone_' + str(i) for i in range(2, 40)]
+B_std_d_delta = ['std_d_delta_phone_' + str(i) for i in range(2, 40)]
+B_abs = ['mean_abs_phone_' + str(i) for i in range(2, 40)]
+B_abs_delta = ['mean_abs_delta_phone_' + str(i) for i in range(2, 40)]
+B_abs_d_delta = ['mean_abs_d_delta_phone_' + str(i) for i in range(2, 40)]
+B_softmax = ['feature_softmax_' + str(i) for i in range(2, 40)]
+B_mean_softmax = ['mean_feature_softmax_' + str(i) for i in range(2, 40)]
 
 
 
-F = F + F_mean + F_std + F_abs + F_mean_delta + F_std_delta + F_abs_delta + F_mean_d_delta + F_std_d_delta + F_abs_d_delta + F_softmax + F_mean_softmax
+B = B_mean + B_std + B_mean_delta + B_std_delta + B_mean_d_delta + B_std_d_delta + B_abs + B_abs_delta + B_abs_d_delta + B_softmax + B_mean_softmax
 
-G = F_mean_softmax
+C = B_mean_softmax
 
-H = ['greedy_feature']
+D = ['greedy_feature']
 
 #%% NEW FEATURES
 #G = ['mean_how_many_phones_arFgMax']
@@ -467,7 +474,7 @@ mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
 y_TRAIN = df_TRAIN['mean_speed_wpau_m1']
 y_VAL = df_VAL['mean_speed_wpau_m1']
 
-features = [A,B,C,D,E,F, G, H]
+features = [A,F, G, H]
 MSE_features_wpau = np.zeros(len(features))
 scores_wpau = np.zeros(len(features))
 for j in range(10):
@@ -517,8 +524,7 @@ width = 0.35  # the width of the bars
 fig, ax = plt.subplots()
 rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses M1')
 rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='With pauses M2')
-plt.xticks(np.arange(len(features)), ['Mean Phonogram' + str(len(A)),'Mean Delta Phonogram'+ str(len(B)),'Mean DDelta Pronogram'+ str(len(C)),'STD Phonogram'+ str(len(D)),
-                                      'ABS Delta Phonogram'+ str(len(E)),'Features Each Phone'+ str(len(F)),'our feature', 'greedy feature']
+plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(F)),'C, dim:'+ str(len(G)), 'D, dim:'+ str(len(H))]
            , rotation=70)
 
 # Add in this plot the name of each feature
