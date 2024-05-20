@@ -144,8 +144,7 @@ def phonograms_to_features(sample_IDs, train = True):
 # OBS: This process takes a long time. It save the phonograms as csv files in the data_phonograms folder 
 
 
-N_TRAIN = len(TIMIT_train)
-N_TEST = len(TIMIT_test)
+
 
 #get_phonograms(TIMIT_train, modelo, 10, train=True)
 
@@ -157,7 +156,8 @@ N_TEST = len(TIMIT_test)
 
 
 #%% ---------------------------- GLOBAL VARIABLES --------------------------------
-
+N_TRAIN = len(TIMIT_train)
+N_TEST = len(TIMIT_test)
 SAMPLE_IDs_TRAIN = ut.get_sample_IDs(TIMIT_train, N_TRAIN)
 SAMPLE_IDs_TEST = ut.get_sample_IDs(TIMIT_test, N_TEST)
 
