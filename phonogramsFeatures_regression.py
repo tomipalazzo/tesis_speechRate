@@ -112,158 +112,13 @@ plt.colorbar()
 plt.show()
 
 
-#%% --------------------- FUNCTIONS ------------------------------------------
-def get_phonograms(TIMIT_set, model, n_samples = 10,  train=True):
-    t0 = time.time()
-    phonograms = []
-    
-
-    print('--------------GETTING PHONOGRAMS-----------------')
-    for i in range(n_samples):
-        sample = TIMIT_set[i]
-
-        sample_id = get_sample_ID(sample['dialect_region'], sample['speaker_id'], sample['id'])
-        
-        audio_data = sample['audio']['array']
-        x = torch.tensor(np.array([audio_data]).astype(np.float32))
-        with torch.no_grad():
-            y = model(x).logits
-        y = y.numpy()[0].T
-
-        # Save each phonogram as a matrix the ohonograms are numpy.ndarray
-        y_df = pd.DataFrame(y)
-        if train:
-            y_df.to_csv('../tesis_speechRate/src/processing/data_phonograms/CHARSIU/Train/' + sample_id + '.csv', index=False)
-        else:
-            y_df.to_csv('../tesis_speechRate/src/processing/data_phonograms/CHARSIU/Test/' + sample_id + '.csv', index=False)
-        
-        
-       # phonograms.append([sample_id,y]) 
-        if i % 10 == 0:
-
-            print('SAMPLE ', i, ' OF ', n_samples)
-
-    t1 = time.time()
-    print('-------------------------------------------------')
-    print('Time to get phonograms: ', t1-t0)
-
-# Dataframes with the array of the samples (array_id, array)
-
-def get_sample_ID(dialect_region, speaker_id, id):
-    return dialect_region + '_' + speaker_id + '_' + id
-
-def get_sample_IDs(TIMIT_set, n_samples = 10):
-    sample_id = []
-    for i in range(n_samples):
-        sample = TIMIT_set[i]
-        sample_id.append(get_sample_ID(sample['dialect_region'], sample['speaker_id'], sample['id']))
-    return sample_id
-
-def get_dialectRegion_and_speacker_ID(sample_ID):
-    # Sample_ID is an string, for example: 'DR1_CJF0_SA1'
-    # Until the first '_' is Dialect region
-    # Until the second '_' is the speaker ID
-    parts = sample_ID.split('_')
-    DR_ID = parts[0]
-    speaker_ID = parts[1]
-    return DR_ID, speaker_ID
-
-#  Phonogram features
-def phonogram_to_features(sample_ID, train=True):
-    if train:
-        phonogram = pd.read_csv('../tesis_speechRate/src/processing/data_phonograms/CHARSIU/Train/'+sample_ID+'.csv')
-    else: 
-        phonogram = pd.read_csv('../tesis_speechRate/src/processing/data_phonograms/CHARSIU/Test/'+sample_ID+'.csv')
-    
-    phonogram = phonogram.to_numpy()
-    delta = librosa.feature.delta(phonogram)
-    d_delta = librosa.feature.delta(phonogram, order=2)
-    
-    DR_ID, speaker_ID = get_dialectRegion_and_speacker_ID(sample_ID=sample_ID)
-
-    dic = {'sample_id': sample_ID}
-    dic['region_id'] =  DR_ID
-    dic['speaker_id'] = speaker_ID
-    
-    # TODO: Vectorizar al estilo numpy
-
-    # Mean each phonogram
-    means = np.mean(phonogram, axis=1)
-    mean_dic = {f'mean_phone_{i+1}': mean for i, mean in enumerate(means)}
-    dic.update(mean_dic)
-
-    # STD each phonogram
-    stds = np.std(phonogram, axis=1)
-    std_dic = {f'std_phone_{i+1}': std for i, std in enumerate(stds)}
-    dic.update(std_dic)
-    
-    # STD delta each phonogram
-    mean_delta = np.mean(delta, axis=1)
-    mean_delta_dic = {f'mean_delta_phone_{i+1}': mean for i, mean in enumerate(mean_delta)}
-    dic.update(mean_delta_dic)
-
-    # STD delta each phonogram
-    std_delta = np.std(delta, axis=1)
-    std_delta_dic = {f'std_delta_phone_{i+1}': std for i, std in enumerate(std_delta)}
-    dic.update(std_delta_dic)
-
-    # STD delta each phonogram
-    mean_d_delta = np.mean(d_delta, axis=1)
-    mean_d_delta_dic = {f'mean_d_delta_phone_{i+1}': mean for i, mean in enumerate(mean_d_delta)}
-    dic.update(mean_d_delta_dic)
-
-    # STD delta each phonogram
-    std_d_delta = np.std(d_delta, axis=1)
-    std_d_delta_dic = {f'std_d_delta_phone_{i+1}': std for i, std in enumerate(std_d_delta)}
-    dic.update(std_d_delta_dic)
-
-    # Mean absolute value of each phonogram
-    abs_mean_phonogram = np.mean(np.abs(phonogram), axis=1)
-    abs_mean_phonogram_dic = {f'mean_abs_phone_{i+1}': mean for i, mean in enumerate(abs_mean_phonogram)}
-    dic.update(abs_mean_phonogram_dic)
-
-    # Mean absolute value of each delta
-    mean_abs_delta = np.mean(np.abs(delta), axis=1)
-    mean_abs_delta_dic = {f'mean_abs_delta_phone_{i+1}': mean for i, mean in enumerate(mean_abs_delta)}
-    dic.update(mean_abs_delta_dic)
-
-    # Mean absolute value of each delta
-    mean_abs_d_delta = np.mean(np.abs(d_delta), axis=1)
-    mean_abs_d_delta_dic = {f'mean_abs_d_delta_phone_{i+1}': mean for i, mean in enumerate(mean_abs_d_delta)}
-    dic.update(mean_abs_d_delta_dic)
-
-    # Add the feature of softmax
-    feature_softmax = how_many_probables_phones(phonogram)[0]
-    dic_feature_softmax = {f'feature_softmax_{i+1}': feature for i, feature in enumerate(feature_softmax)}
-    dic.update(dic_feature_softmax)
-
-    # Add the mean feature of softmax
-    mean_feature_softmax = how_many_probables_phones(phonogram)[1]
-    dic_mean_feature_softmax = {f'mean_feature_softmax_{i+1}': feature for i, feature in enumerate(mean_feature_softmax)}
-    dic.update(dic_mean_feature_softmax)    
-
-
-    # Means realated of all the phonogram
-    dic['all_mean_phonogram'] = np.mean(phonogram)
-    dic['all_mean_delta'] = np.mean(delta)
-    dic['all_mean_d_delta'] = np.mean(d_delta)
-    dic['all_std_phonogram'] = np.std(phonogram)
-    dic['all_mean_abs_phonogram'] = np.mean(np.abs(phonogram))
-    dic['all_mean_abs_delta'] = np.mean(np.abs(delta))
-    dic['all_mean_abs_d_delta'] = np.mean(np.abs(d_delta))
-    
-    dic['greedy_feature'] = greedy_feature(phonogram)[0]
-    
-    
-    features = pd.DataFrame(dic, index=[0])
-    # Save the features as a csv file
-    return features
-
+#%% ======================= FUNCTIONS ==================================
 def phonograms_to_features(sample_IDs, train = True):
     print('==============GETTING PHONOGRAMS FEATURES================')
     features = pd.DataFrame()
     for i in range(len(sample_IDs)):
-        features = pd.concat([features, phonogram_to_features(sample_IDs[i], train=train)], ignore_index=True)
+
+        features = pd.concat([features, ut.phonogram_to_features(sample_ID=sample_IDs[i], train=train)], ignore_index=True)
 
         if i % 10 == 0:
             print('SAMPLE ', i, ' OF ', len(sample_IDs))
@@ -277,63 +132,11 @@ def phonograms_to_features(sample_IDs, train = True):
     print('=================FINISHED===================')        
     return features
 
-def softmax_phonogram(phonogram):
-    # dataframe to torch
-    phonogram = torch.tensor(phonogram.astype(np.float32))
-    phonogram_softmax = torch.softmax(phonogram, dim=0)
-    #to numpy
-    phonogram_softmax = phonogram_softmax.numpy()
-
-    return phonogram_softmax
-
-def greedy_feature(phonogram, t=0):
-    T = phonogram.shape[1]
-    
-    if t == 0:
-        t = T
-
-    s = np.zeros(t)
-    how_many_until_i = 0
-
-    argmax = -1
-    for i in range(t):
-        arg_max_new = np.argmax(phonogram[:,i])
-        is_a_silence = arg_max_new == 0
-        is_a_new_phone = arg_max_new != argmax 
-
-        if (is_a_new_phone) and (not is_a_silence):
-            argmax = arg_max_new
-            how_many_until_i += 1
-        s[i] = how_many_until_i
-    
-    mean_most_probable_phones = how_many_until_i/t
-
-    return mean_most_probable_phones,s
-        
-#def mean_phones_features(phonogram):
-#    how_many_phones_argMax = how_many_phones_since_t(phonogram)[0]
-#    how_many_probables_phone = how_many_probables_phones(phonogram)[0]
-#    T = phonogram.shape[1]/100 # 100 is the number of frames per second
-#    return how_many_phones_argMax/T, how_many_probables_phone/T
-
-def how_many_probables_phones(phonogram, t=0):
-    number_of_phones = 42
-    T = phonogram.shape[1]
-    if t == 0:
-        t = T
-    phonogram_softmax = softmax_phonogram(phonogram)
-    phonogram_softmax = phonogram_softmax > 0.5
-    
-    d_phonogram_softmax = np.diff(phonogram_softmax, axis=1)
-
-    res  = np.zeros(number_of_phones)
-    for i in range(number_of_phones):
-        res[i] = np.sum(d_phonogram_softmax[i,:])
-
-    
-
-    return res, res/t
-
+#def batch_phonograms_to_features(sample_IDs, train = True, batch_size = 10):
+#    print('==============GETTING BATCH PHONOGRAMS FEATURES================')
+#    features = pd.DataFrame()
+#    for i in range(len(sample_IDs)):
+           
 
 
 
@@ -355,8 +158,8 @@ N_TEST = len(TIMIT_test)
 
 #%% ---------------------------- GLOBAL VARIABLES --------------------------------
 
-SAMPLE_IDs_TRAIN = get_sample_IDs(TIMIT_train, N_TRAIN)
-SAMPLE_IDs_TEST = get_sample_IDs(TIMIT_test, N_TEST)
+SAMPLE_IDs_TRAIN = ut.get_sample_IDs(TIMIT_train, N_TRAIN)
+SAMPLE_IDs_TEST = ut.get_sample_IDs(TIMIT_test, N_TEST)
 
 
 # ------------------------------- TEST FUNCTIONS --------------------------------------
@@ -373,7 +176,7 @@ plt.colorbar()
 plt.show()
 
 phonogram = phonogram.to_numpy()
-phonogram_softmax = softmax_phonogram(phonogram)
+phonogram_softmax = ut.softmax_phonogram(phonogram)
 phonogram_softmax = phonogram_softmax > 0.5
 plt.figure(figsize=(10, 7))
 plt.pcolor(phonogram_softmax)
@@ -386,7 +189,7 @@ plt.title('Phonogram')
 #how_many_phones_since_t(phonogram)
 #print(how_many_phones_since_t(phonogram)[1])
 #mean_phones_arg_max(phonogram)
-how_many_probables_phones(phonogram)[0]
+ut.how_many_probables_phones(phonogram)[0]
 
 #%% -------------------------- GENERATE FEATURES -----------------------------
 
@@ -394,7 +197,7 @@ how_many_probables_phones(phonogram)[0]
 
 phonogram_features_TRAIN = phonograms_to_features(SAMPLE_IDs_TRAIN, train = True)
 phonogram_features_TEST = phonograms_to_features(SAMPLE_IDs_TEST, train = False)
-
+#%%
 # READ FEATURES 
 phonogram_features_TRAIN = pd.read_csv('../tesis_speechRate/src/processing/data_phonograms/data_features/Train/features_train.csv')
 phonogram_features_TEST = pd.read_csv('../tesis_speechRate/src/processing/data_phonograms/data_features/Test/features_test.csv')
@@ -427,10 +230,10 @@ df_VAL = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(speaker_id_val)]
 
 
 # %% TRAIN SET
-X_TRAIN  = df_TRAIN.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_m1', 'mean_speed_wpau_m2', 'mean_speed_wopau_m1', 'mean_speed_wopau_m2'])
-y_TRAIN = df_TRAIN['mean_speed_wpau_m1']
-X_VAL = df_VAL.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_m1', 'mean_speed_wpau_m2', 'mean_speed_wopau_m1', 'mean_speed_wopau_m2'])
-y_VAL = df_VAL['mean_speed_wpau_m1']
+X_TRAIN  = df_TRAIN.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
+y_TRAIN = df_TRAIN['mean_speed_wpau_v1']
+X_VAL = df_VAL.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
+y_VAL = df_VAL['mean_speed_wpau_v1']
 # %% =================== FEATURES SELECTION ===================================
 
 A = ['all_mean_phonogram', 
@@ -473,8 +276,8 @@ N = 10
 
 mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
 #%% Metric 1
-y_TRAIN = df_TRAIN['mean_speed_wpau_m1']
-y_VAL = df_VAL['mean_speed_wpau_m1']
+y_TRAIN = df_TRAIN['mean_speed_wpau_v1']
+y_VAL = df_VAL['mean_speed_wpau_v1']
 
 features = [A,B, C, D]
 MSE_features_wpau = np.zeros(len(features))
@@ -497,8 +300,8 @@ mean_score_features_wpau = scores_wpau/N
 mean_MSE_features_wpau = MSE_features_wpau/N
 
 #%% Metric 2
-y_TRAIN = df_TRAIN['mean_speed_wpau_m2']
-y_VAL = df_VAL['mean_speed_wpau_m2']
+y_TRAIN = df_TRAIN['mean_speed_wopau_v1']
+y_VAL = df_VAL['mean_speed_wopau_v1']
 MSE_features_wopau = np.zeros(len(features))
 scores_wopau = np.zeros(len(features))
 for j in range(N):
@@ -524,16 +327,17 @@ mean_MSE_features_wopau = MSE_features_wopau/N
 x = np.arange(len(features))
 width = 0.35  # the width of the bars
 fig, ax = plt.subplots()
-rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses M1')
-rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='With pauses M2')
-plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(F)),'C, dim:'+ str(len(G)), 'D, dim:'+ str(len(H))]
-           , rotation=70)
+rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses v1')
+rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='With out pauses v1')
+plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D))]
+           , rotation=0)
 
 # Add in this plot the name of each feature
 plt.title('Prediction of the speech rate')
 plt.xlabel('Groups of features')
-plt.ylabel('Mean R2 - 50 iterations')
+plt.ylabel('Mean R2 - '+ str(N) + ' iterations')
 plt.legend()
+plt.savefig('a_b_c_d_barplot.png')
 plt.show()
 
 
@@ -557,4 +361,4 @@ X_TRAIN
 sns.pairplot(pd.concat([X_TRAIN.filtermean_speed_wopau(regex='all_*'),y_TRAIN],axis=1), hue="mean_speed_wopau", palette="husl")
 
 
-# %%
+# %% Generate Features per batch

@@ -1,4 +1,4 @@
-sample_id,duration_wpau,duration_wopau,mean_speed_wpau_m1,mean_speed_wopau_m1,mean_speed_wpau_m2,mean_speed_wopau_m2,amount_phones,amount_silences
+sample_id,duration_wpau,duration_wopau,mean_speed_wpau_v1,mean_speed_wopau_v1,mean_speed_wpau_v2,mean_speed_wopau_v2,amount_phones,amount_silences
 DR1_CJF0_SA1,2.596,2.596,13.097072419106317,13.222497690924119,13.61139468183365,13.222497690924119,34,3
 DR1_CJF0_SA2,1.9291875,1.9291875,15.032235073055366,15.032235073055368,15.032235073055366,15.032235073055366,29,2
 DR1_CJF0_SI1027,2.81675,2.81675,14.910801455578238,15.004688965301654,15.361943464475504,15.004688965301654,42,3
