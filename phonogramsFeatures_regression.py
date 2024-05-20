@@ -171,18 +171,35 @@ phonogram = pd.read_csv('../tesis_speechRate/src/processing/data_phonograms/CHAR
 plt.figure(figsize=(10, 7))
 plt.pcolor(phonogram)
 plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+t = np.arange(phonogram.shape[1])
+plt.xticks(t[::50], t[::50]/100)
 plt.title('Phonogram')
+plt.ylabel('Phonemes')
+plt.xlabel('time(s)')
+plt.ylim(0, 40)
 plt.colorbar()
-plt.show()
 
+plt.savefig('phonogram_sheHadYour.png')
+plt.show()
+#%%
 phonogram = phonogram.to_numpy()
 phonogram_softmax = ut.softmax_phonogram(phonogram)
 phonogram_softmax = phonogram_softmax > 0.5
 plt.figure(figsize=(10, 7))
 plt.pcolor(phonogram_softmax)
 plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
+t = np.arange(phonogram.shape[1])
+plt.xticks(t[::50], t[::50]/100)
+plt.xlabel('time(s)')
+plt.ylabel('Phonemes')
+plt.ylim(0,40)
 plt.colorbar()
-plt.title('Phonogram')
+plt.title('Softmax(Phonogram) > 0.5')
+plt.savefig('phonogram_sheHadYour_softmax.png')
+plt.show()
+#%%
+
+
 
 #%%
 
