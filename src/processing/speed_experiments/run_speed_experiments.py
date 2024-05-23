@@ -398,32 +398,41 @@ D = ['greedy_feature']
 # %%
 features = [A,B, C, D]
 
-X = data_set_with_out_pau
-y = data_set_with_out_pau['y']
+X_wopau = data_set_with_out_pau
+y_wopau = data_set_with_out_pau['y']
+X_wpau = data_set_with_pau
+y_wpau = data_set_with_pau['y']
 
 # Split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
 N=3
 
-MSE_features_wpau = np.zeros(len(features))
-scores_wpau = np.zeros(len(features))
-for j in range(N):
-    for i in range(len(features)):
-        print('Features:', features[i])
-        X_train_fi = X_train[features[i]]
-        X_test_fi = X_test[features[i]]
-        
-        # Regression
-        positive=True
-        model = linear_model.LinearRegression(positive=positive)
-        model.fit(X_train_fi, y_train)
-        y_pred = model.predict(X_test_fi)
-        MSE_features_wpau[i] += mean_squared_error(y_test, y_pred)
-        scores_wpau[i] += model.score(X_test_fi, y_test)
 
-mean_score_features_wpau = scores_wpau/N
-mean_MSE_features_wpau = MSE_features_wpau/N
+def get_by_feature(X, y, features, N=3):
+    MSE_features = np.zeros(len(features))
+    scores = np.zeros(len(features))
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    for j in range(N):
+        for i in range(len(features)):
+            print('Features:', features[i])
+            X_train_fi = X_train[features[i]]
+            X_test_fi = X_test[features[i]]
+            
+            # Regression
+            positive=True
+            model = linear_model.LinearRegression(positive=positive)
+            model.fit(X_train_fi, y_train)
+            y_pred = model.predict(X_test_fi)
+            MSE_features[i] += mean_squared_error(y_test, y_pred)
+            scores[i] += model.score(X_test_fi, y_test)
+    
+    mean_score_features = scores/N
+    mean_MSE_features = MSE_features/N
+
+    return mean_score_features, mean_MSE_features
+
+mean_score_features_wpau, mean_MSE_features_wpau = get_by_feature(X_wpau, y_wpau, features, N=3)
+mean_score_features_wo_pau, mean_MSE_features_wo_pau = get_by_feature(X_wopau, y_wopau, features, N=3)
 
 # %%
 x = np.arange(len(features))
@@ -740,3 +749,5 @@ plt.legend()
 plt.savefig('a_b_c_d_barplot.png')
 plt.show()
 # %%
+
+# HI
