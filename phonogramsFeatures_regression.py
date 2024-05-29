@@ -212,8 +212,8 @@ ut.how_many_probables_phones(phonogram)[0]
 
 # Get phonogram features of N_SAMPLES samples in the training set
 
-phonogram_features_TRAIN = phonograms_to_features(SAMPLE_IDs_TRAIN, train = True)
-phonogram_features_TEST = phonograms_to_features(SAMPLE_IDs_TEST, train = False)
+#phonogram_features_TRAIN = phonograms_to_features(SAMPLE_IDs_TRAIN, train = True)
+#phonogram_features_TEST = phonograms_to_features(SAMPLE_IDs_TEST, train = False)
 #%%
 # READ FEATURES 
 phonogram_features_TRAIN = pd.read_csv('../tesis_speechRate/src/processing/data_phonograms/data_features/Train/features_train.csv')
@@ -264,31 +264,39 @@ A = ['all_mean_phonogram',
 
 
 #%% ALl PHONES FEATURES
-B = []
+# Means
 B_mean = ['mean_phone_' + str(i) for i in range(2, 40)]
-B_std = ['std_phone_' + str(i) for i in range(2, 40)]
 B_mean_delta = ['mean_delta_phone_' + str(i) for i in range(2, 40)]
-B_std_delta = ['std_delta_phone_' + str(i) for i in range(2, 40)]   
 B_mean_d_delta = ['mean_d_delta_phone_' + str(i) for i in range(2, 40)]
+
+# Stds
+B_std = ['std_phone_' + str(i) for i in range(2, 40)]
+B_std_delta = ['std_delta_phone_' + str(i) for i in range(2, 40)]   
 B_std_d_delta = ['std_d_delta_phone_' + str(i) for i in range(2, 40)]
-B_abs = ['mean_abs_phone_' + str(i) for i in range(2, 40)]
-B_abs_delta = ['mean_abs_delta_phone_' + str(i) for i in range(2, 40)]
-B_abs_d_delta = ['mean_abs_d_delta_phone_' + str(i) for i in range(2, 40)]
+
+# Abs
+B_mean_abs = ['mean_abs_phone_' + str(i) for i in range(2, 40)]
+B_mean_abs_delta = ['mean_abs_delta_phone_' + str(i) for i in range(2, 40)]
+B_mean_abs_d_delta = ['mean_abs_d_delta_phone_' + str(i) for i in range(2, 40)]
+
+
 B_softmax = ['feature_softmax_' + str(i) for i in range(2, 40)]
 B_mean_softmax = ['mean_feature_softmax_' + str(i) for i in range(2, 40)]
 
 
 
-B = B_mean + B_std + B_mean_delta + B_std_delta + B_mean_d_delta + B_std_d_delta + B_abs + B_abs_delta + B_abs_d_delta + B_softmax + B_mean_softmax
+B = B_mean + B_std + B_mean_delta + B_std_delta + B_mean_d_delta + B_std_d_delta + B_mean_abs + B_mean_abs_delta + B_mean_abs_d_delta
 
 C = B_mean_softmax
 
 D = ['greedy_feature']
 
+BC = B + C
+
 #%% NEW FEATURES
 #G = ['mean_how_many_phones_arFgMax']
 #H = ['mean_how_many_probables_phones']
-N = 10
+N = 1
 
 
 mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
@@ -296,7 +304,7 @@ mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
 y_TRAIN = df_TRAIN['mean_speed_wpau_v1']
 y_VAL = df_VAL['mean_speed_wpau_v1']
 
-features = [A,B, C, D]
+features = [A,B,C,D,BC]
 MSE_features_wpau = np.zeros(len(features))
 scores_wpau = np.zeros(len(features))
 for j in range(N):
@@ -315,6 +323,8 @@ for j in range(N):
 
 mean_score_features_wpau = scores_wpau/N
 mean_MSE_features_wpau = MSE_features_wpau/N
+#%%
+
 
 #%% Metric 2
 y_TRAIN = df_TRAIN['mean_speed_wopau_v1']
@@ -346,7 +356,7 @@ width = 0.35  # the width of the bars
 fig, ax = plt.subplots()
 rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses v1')
 rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='With out pauses v1')
-plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D))]
+plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D)), 'BC, dim:'+ str(len(BC))]
            , rotation=0)
 
 # Add in this plot the name of each feature
@@ -360,7 +370,7 @@ plt.show()
 
 # %% Correlation Matrix
 
-ALL_FEATURES = A + B + C + D
+ALL_FEATURES = A + B + C + D 
 X_TRAIN_ALL = X_TRAIN[ALL_FEATURES]
 sns.heatmap(X_TRAIN_ALL.corr())
 plt.title('Correlation Matrix of the features')
@@ -375,7 +385,7 @@ sns.heatmap(mean_phone.corr())
 
 X_TRAIN
 # %% 
-sns.pairplot(pd.concat([X_TRAIN.filtermean_speed_wopau(regex='all_*'),y_TRAIN],axis=1), hue="mean_speed_wopau", palette="husl")
+sns.pairplot(pd.concat([X_TRAIN.filter(regex='all_*'),y_TRAIN],axis=1), hue="mean_speed_wopau_v1", palette="husl")
 
 
 # %% Add CHarsiu forced aligment
