@@ -388,17 +388,20 @@ X_TRAIN
 sns.pairplot(pd.concat([X_TRAIN.filter(regex='all_*'),y_TRAIN],axis=1), hue="mean_speed_wopau_v1", palette="husl")
 
 
-# %% Add CHarsiu forced aligment
-# Line 1: Instantiate a forced aligner object from the 'charsiu' library using a specified model.
-# 'aligner' specifies the model to be used for alignment, likely based on the Wav2Vec 2.0 model trained for frame classification every 10 milliseconds.
+#%%
+#%%
 
-charsiu_attention = charsiu_chain_attention_aligner(aligner='charsiu/en_w2v2_fs_10ms',recognizer='charsiu/en_w2v2_ctc_libris_and_cv')
-charsiu_forced_aligment = charsiu_chain_forced_aligner(aligner='charsiu/en_w2v2_fc_10ms',recognizer='charsiu/en_w2v2_ctc_libris_and_cv')
-
-
-# %%
+# Use a pipeline as a high-level helper
+# Load model directly
 audio = TIMIT_train[0]
 audio_path = audio['file']
+charsiu_pred = charsiu_predictive_aligner(aligner='charsiu/en_w2v2_fc_10ms')
+aligment = charsiu_pred.align(audio=audio_path)
+
+#%%
+aligment
+# %%
+
 attention_alignment = charsiu_attention.align(audio=audio_path)
 
 # %%
@@ -452,8 +455,20 @@ def get_charsiu_dataset(model, N_SAMPLES=10, train=True):
         
 
 # %% Generate TRAIN and TEST datasets
-#get_charsiu_dataset(charsiu_attention, N_TRAIN, train=True)
+get_charsiu_dataset(charsiu_pred, N_TRAIN, train=True)
+get_charsiu_dataset(charsiu_pred, N_TEST, train=False)
 #get_charsiu_dataset(charsiu_forced_aligment, N_TRAIN, train=True)
 #get_charsiu_dataset(charsiu_attention, N_TEST, train=False)
 #get_charsiu_dataset(charsiu_forced_aligment, N_TEST, train=False)
+# %% Read those files
+#charsiu_attention_test = pd.read_csv('src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_chain_attention_aligner object at 0x7cfd7df182e0>_test.csv')
+#charsiu_attention_train = pd.read_csv('src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_chain_attention_aligner object at 0x7cfd7df182e0>_train.csv')
+#charsiu_forced_aligment_test = pd.read_csv('src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_chain_forced_aligner object at 0x7cfd7df194e0>_test.csv')
+#charsiu_forced_aligment_train = pd.read_csv('src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_chain_forced_aligner object at 0x7cfd7df194e0>_train.csv')
+charsiu_pred_aligment_test = pd.read_csv('../tesis_speechRate/src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_test.csv')
+charsiu_pred_aligment_train = pd.read_csv('../tesis_speechRate/src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_train.csv')
+# %%
+
+
+
 # %%

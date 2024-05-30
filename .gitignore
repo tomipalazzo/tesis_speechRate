@@ -4,3 +4,5 @@ src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_
 src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_chain_attention_aligner object at 0x7cfd7df182e0>_train.csv
 src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_chain_forced_aligner object at 0x7cfd7df194e0>_test.csv
 src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_chain_forced_aligner object at 0x7cfd7df194e0>_train.csv
+src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_test.csv
+src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_train.csv
