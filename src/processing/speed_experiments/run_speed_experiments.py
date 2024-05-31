@@ -577,19 +577,24 @@ def speed_df(sample_id, train=True, step_size=5, window_size=20, with_pause=Fals
     sample_features = record_phone_train[record_phone_train['sample_id'] == sample_id] if train else record_phone_test[record_phone_test['sample_id'] == sample_id]
     #reset index
     sample_features = sample_features.reset_index(drop=True)
-    x, y = m1(sample_features, step_size=step_y, window_size=window_y, with_pau=with_pause)    
-
+    x_wp, y_wp = m1(sample_features, step_size=step_y, window_size=window_y, with_pau=True)    
+    x_wop, y_wop = m1(sample_features, step_size=step_y, window_size=window_y, with_pau=False)
 
     df = pd.DataFrame()
-    if len(x) == len(y) == len(sections):
-        df['x'] = x
-        df['y'] = y
+    if len(x_wp) == len(y_wp) == len(x_wop) == len(y_wop) == len(sections):
+        df['x_wp'] = x_wp
+        df['y_wp'] = y_wp
+        df['x_wop'] = x_wop
+        df['y_wop'] = y_wop
         df['section'] = sections
         
     else:
-        L  = min(len(x), len(sections), len(y))
-        df['x'] = x[:L]
-        df['y'] = y[:L]
+        L  = min(len(x_wp), len(sections), len(y_wp), len(x_wop), len(x_wop))
+        df['x_wp'] = x_wp[:L]
+        df['y_wp'] = y_wp[:L]
+        df['x_wop'] = x_wop[:L]
+        df['y_wop'] = y_wop[:L]
+        
         df['section'] = sections[:L]
     
 
@@ -632,8 +637,7 @@ def generate_data(sample_ids, train=True, step_size=5, window_size=20, with_paus
 SAMPLE_ID = SAMPLE_IDs_TRAIN[3]
 # %%
 # %%
-#generate_data(SAMPLE_IDs_TRAIN, train=True, step_size=1/8*16000, window_size=1/4*16000, with_pause=False)
-#generate_data(SAMPLE_IDs_TRAIN, train=True, with_pause=True)
+generate_data(SAMPLE_IDs_TRAIN, train=True, with_pause=True)
 
 # %% Open the data set
 data_set_with_out_pau = pd.read_csv('../tesis_speechRate/src/processing/speed_experiments/data/data_set_train_with_out_pau.csv')
@@ -646,8 +650,8 @@ data_set_with_pau.shape
 
 
 # %% APPLY THE MODEL
-X = data_set.drop(['x', 'y', 'section', 'sample_id', 'region_id', 'speaker_id'], axis=1)
-y = data_set['y']   
+X = data_set_with_pau.drop(['x', 'y', 'section', 'sample_id', 'region_id', 'speaker_id'], axis=1)
+y = data_set_with_pau['y']   
 
 # %%
 model = linear_model.LinearRegression(positive=True)
@@ -660,7 +664,7 @@ r2 = model.score(X_test, y_test)
 # %%
 print(r2)
 # %% 
-X = data_set.filter(regex='mean_feature_softmax')
+X = data_set_with_pau.filter(regex='mean_feature_softmax')
 
 # %%
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -706,8 +710,8 @@ D = ['greedy_feature']
 # %%
 features = [A,B, C, D]
 
-X = data_set
-y = data_set['y']
+X = data_set_with_pau
+y = data_set_with_pau['y']
 
 # Split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

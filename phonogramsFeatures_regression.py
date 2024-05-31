@@ -467,8 +467,18 @@ get_charsiu_dataset(charsiu_pred, N_TEST, train=False)
 #charsiu_forced_aligment_train = pd.read_csv('src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_chain_forced_aligner object at 0x7cfd7df194e0>_train.csv')
 charsiu_pred_aligment_test = pd.read_csv('../tesis_speechRate/src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_test.csv')
 charsiu_pred_aligment_train = pd.read_csv('../tesis_speechRate/src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_train.csv')
+# %% change the column phonemes to utterance
+charsiu_pred_aligment_train.rename(columns={'phoneme': 'utterance'}, inplace=True)
+
+
+
+step_y  = 5/100*16000    # In the same scale as the phonogram
+window_y = 20/100*16000 # In the same scale as the phonogram
+ut.get_real_speed_CHARSIU_TEXTLESS(sample_ids=SAMPLE_IDs_TRAIN, data = charsiu_pred_aligment_train, step_size=step_y, window_size=window_y, train=True)
+
+
+
 # %%
-
-
-
+charsiu_pred_aligment_train['duration_s'] = charsiu_pred_aligment_train['stop'] - charsiu_pred_aligment_train['start']
+charsiu_df_by_sample_train = ut.TIMIT_df_by_sample_phones(charsiu_pred_aligment_train)
 # %%

@@ -10,6 +10,7 @@ from datasets import load_dataset
 import librosa
 import torch 
 import time
+from src.pre_processing.metrics.metrics import m1
 
 #%% 
 
@@ -610,3 +611,35 @@ def how_many_probables_phones(phonogram, t=0):
 
 
 
+#%% =================================== GENERATE THE INSTANTANOUS SPEED ===================================
+
+
+def get_real_speed_CHARSIU_TEXTLESS(sample_ids, data, train=True, step_size=1/60*16000, window_size=1/4*16000, with_pause=False):
+    """
+    This function returns the real speed of the samples in the sample_ids list.
+    """
+    print('PROCESSING ' + 'TRAIN' if train else 'TEST')
+    N = len(sample_ids)
+    
+    t0 = time.time()
+
+    for i in range(N):
+
+        if i % 100 == 0:
+            print('Processing sample ' + str(i) + ' of ' + str(N))
+        
+        speed_df = pd.DataFrame()
+        sample_id = sample_ids[i]
+        sample_features = data[data['sample_id'] == sample_id] if train else data[data['sample_id'] == sample_id]
+        
+        #reset index
+        sample_features = sample_features.reset_index(drop=True)
+        
+        x, y = m1(sample_features, step_size=step_size, window_size=window_size, with_pau=with_pause)
+        speed_df['x'] = x
+        speed_df['y'] = y
+
+
+    tf = time.time()
+
+    print('DONE. Time:' + str(tf-t0) + 's')
