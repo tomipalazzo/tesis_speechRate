@@ -155,13 +155,17 @@ B_mean_softmax = ['mean_feature_softmax_' + str(i) for i in range(2, 40)]
 
 
 
-B = B_mean + B_std + B_mean_delta + B_std_delta + B_mean_d_delta + B_std_d_delta + B_mean_abs + B_mean_abs_delta + B_mean_abs_d_delta
+B = B_mean + B_std + B_mean_delta + B_std_delta + B_mean_d_delta + B_std_d_delta 
+
+B_abs = B_mean_abs + B_mean_abs_delta + B_mean_abs_d_delta
 
 C = B_mean_softmax
 
 D = ['greedy_feature']
 
 BC = B + C
+
+B_ABS_C = B_abs + C
 
 F = ['charsiu_pred_aligment_mean_speed_wpau_v1']
 

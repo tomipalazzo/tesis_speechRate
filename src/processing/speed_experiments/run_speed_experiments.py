@@ -327,39 +327,12 @@ SAMPLE_ID = SAMPLE_IDs_TRAIN[3]
 #generate_data(SAMPLE_IDs_TRAIN, train=True, step_size=1/8*16000, window_size=1/4*16000, with_pause=False)
 #generate_data(SAMPLE_IDs_TRAIN, train=True, with_pause=True)
 
-# %% Open the data set
-data_set_with_out_pau = pd.read_csv('../tesis_speechRate/src/processing/speed_experiments/data/data_set_train_with_out_pau.csv')
-data_set_with_pau = pd.read_csv('../tesis_speechRate/src/processing/speed_experiments/data/data_set_train_with_pau.csv')
-#%%
-data_set_with_out_pau.shape
-# %%
-data_set_with_pau.shape
-
-
-
-# %% APPLY THE MODEL
-X = data_set_with_out_pau.drop(['x', 'y', 'section', 'sample_id', 'region_id', 'speaker_id'], axis=1)
-y = data_set_with_out_pau['y']   
 
 # %%
-model = linear_model.LinearRegression(positive=True)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
 
-# Score
-r2 = model.score(X_test, y_test)
-# %%
-print(r2)
 # %% 
-X = data_set_with_out_pau.filter(regex='mean_feature_softmax')
 
-# %%
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-r2 = model.score(X_test, y_test)
-print(r2)
+
 
 # %%
 A = ['all_mean_phonogram', 
@@ -398,10 +371,7 @@ D = ['greedy_feature']
 # %%
 features = [A,B, C, D]
 
-X_wopau = data_set_with_out_pau
-y_wopau = data_set_with_out_pau['y']
-X_wpau = data_set_with_pau
-y_wpau = data_set_with_pau['y']
+
 
 # Split
 N=3
@@ -637,21 +607,46 @@ def generate_data(sample_ids, train=True, step_size=5, window_size=20, with_paus
 SAMPLE_ID = SAMPLE_IDs_TRAIN[3]
 # %%
 # %%
-generate_data(SAMPLE_IDs_TRAIN, train=True, with_pause=True)
+#generate_data(SAMPLE_IDs_TRAIN, train=True, with_pause=True)
 
 # %% Open the data set
-data_set_with_out_pau = pd.read_csv('../tesis_speechRate/src/processing/speed_experiments/data/data_set_train_with_out_pau.csv')
+#data_set_with_out_pau = pd.read_csv('../tesis_speechRate/src/processing/speed_experiments/data/data_set_train_with_out_pau.csv')
 data_set_with_pau = pd.read_csv('../tesis_speechRate/src/processing/speed_experiments/data/data_set_train_with_pau.csv')
-#%%
-data_set_with_out_pau.shape
+#
 # %%
 data_set_with_pau.shape
 
 
 
+
+#%% -------------------------- SPLITTING -------------------------------------
+speaker_id = data_set_with_pau['speaker_id'].unique()
+n_speakers = len(speaker_id)
+
+# 80% Train - 20% Val
+n_train = round(0.8*n_speakers)
+n_val = n_speakers - n_train
+# Choose randomly
+random.shuffle(speaker_id)
+speaker_id_train = speaker_id[:n_train]
+speaker_id_val = speaker_id[n_train:]
+#%%
+# Filter the speaker_id_train
+df_TRAIN = data_set_with_pau[data_set_with_pau['speaker_id'].isin(speaker_id_train)]
+df_VAL = data_set_with_pau[data_set_with_pau['speaker_id'].isin(speaker_id_val)]
+
+
+# %% TRAIN SET
+X_TRAIN  = df_TRAIN.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
+y_TRAIN = df_TRAIN['mean_speed_wpau_v1']
+X_VAL = df_VAL.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
+y_VAL = df_VAL['mean_speed_wpau_v1']
+
+
+
 # %% APPLY THE MODEL
-X = data_set_with_pau.drop(['x', 'y', 'section', 'sample_id', 'region_id', 'speaker_id'], axis=1)
-y = data_set_with_pau['y']   
+X = data_set_with_pau.drop(['x_wp', 'y_wp','x_wop','y_wop', 'section', 'sample_id', 'region_id', 'speaker_id'], axis=1)
+y = data_set_with_pau['y_wp']   
 
 # %%
 model = linear_model.LinearRegression(positive=True)
