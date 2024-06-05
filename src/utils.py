@@ -10,6 +10,9 @@ from datasets import load_dataset
 import librosa
 import torch 
 import time
+from sklearn import linear_model
+from sklearn.metrics import mean_squared_error
+import seaborn as sns
 from src.pre_processing.metrics.metrics import m1
 
 #%% 
@@ -643,3 +646,25 @@ def get_real_speed_CHARSIU_TEXTLESS(sample_ids, data, train=True, step_size=1/60
     tf = time.time()
 
     print('DONE. Time:' + str(tf-t0) + 's')
+
+
+def r2_experiment(df_train, df_val, y_train, y_val, features, N=10):
+    MSE_features = np.zeros(len(features))
+    scores = np.zeros(len(features))
+    for j in range(N):
+        for i in range(len(features)):
+            print('Features:', features[i])
+            X_TRAIN_fi = df_train[features[i]]
+            X_VAL_fi = df_val[features[i]]
+            
+            # Regression
+            positive=True
+            model = linear_model.LinearRegression(positive=positive)
+            model.fit(X_TRAIN_fi, y_train)
+            y_pred = model.predict(X_VAL_fi)
+            MSE_features[i] += mean_squared_error(y_val, y_pred)
+            scores[i] += model.score(X_VAL_fi, y_val)
+
+    mean_score_features = scores/N
+    mean_MSE_features = MSE_features/N
+    return mean_score_features, mean_MSE_features

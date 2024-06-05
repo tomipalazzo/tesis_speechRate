@@ -78,12 +78,16 @@ print(phonemes)
 # Example: Forced alignment of an audio file
 
 # Audio by my own: 
-audio_file = '../tesis_speechRate/audios_tomas/she_has_your.wav'  # Replace with the path to your audio file
-waveform, sample_rate = librosa.load(audio_file, sr=None)
+#audio_file = '../tesis_speechRate/audios_tomas/she_has_your.wav'  # Replace with the path to your audio file
+#waveform, sample_rate = librosa.load(audio_file, sr=None)
+
+# TIMIT Sample
+sample = TIMIT_train[0]['audio']['array']
+
 # Play audio
 
 
-x = torch.tensor(np.array([waveform]).astype(np.float32))
+x = torch.tensor(np.array([sample]).astype(np.float32))
 with torch.no_grad():
     y = modelo(x)
     y = modelo(x).logits
@@ -104,11 +108,29 @@ plt.show()
 # ----------------------------------------------------------------------------
 
 #%% With softmax
+# T 2 string
+num_samples = y_softmax.shape[1]
+total_seconds = num_samples / 100  # This will be a float if num_samples isn't a multiple of 100
+
+# Create an array for tick positions at every 50 samples (0.5 seconds if 100 samples = 1 second)
+tick_positions = np.linspace(0, num_samples, int(3 * total_seconds + 1))
+tick_labels = np.linspace(0, total_seconds, int(3 * total_seconds + 1))
+
+
 plt.figure(figsize=(10, 7))
 plt.pcolor(y_softmax)
+plt.xticks(tick_positions, [f"{label:.1f}" for label in tick_labels])  # Set x-ticks to show time in fractional seconds
+plt.title('Posteriogram')
+plt.ylabel('Phonemes')
+plt.xlabel('time(s)')
 plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
-plt.title('Phonogram')
+plt.ylim(0, 40)
+# For each 100 samples, we have 1 second do not plt.xticks(t[::50], t[::50])
+
+
+
 plt.colorbar()
+plt.savefig('posteriogram_sheHasYour.png')
 plt.show()
 
 
@@ -159,7 +181,7 @@ def phonograms_to_features(sample_IDs, train = True):
 N_TRAIN = len(TIMIT_train)
 N_TEST = len(TIMIT_test)
 SAMPLE_IDs_TRAIN = ut.get_sample_IDs(TIMIT_train, N_TRAIN)
-SAMPLE_IDs_TEST = ut.get_sample_IDs(TIMIT_test, N_TEST)
+#SAMPLE_IDs_TEST = ut.get_sample_IDs(TIMIT_test, N_TEST)
 
 
 # ------------------------------- TEST FUNCTIONS --------------------------------------
@@ -296,7 +318,7 @@ BC = B + C
 #%% NEW FEATURES
 #G = ['mean_how_many_phones_arFgMax']
 #H = ['mean_how_many_probables_phones']
-N = 1
+N = 10
 
 
 mean_phone = df_TRAIN.filter(regex='^mean_phone_*')

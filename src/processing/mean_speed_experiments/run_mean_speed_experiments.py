@@ -90,9 +90,8 @@ charsiu_df_by_sample_train = ut.TIMIT_df_by_sample_phones(charsiu_pred_aligment_
 #charsiu_df_by_sample_train.columns = ['charsiu_pred_aligment_' + str(col) for col in charsiu_df_by_sample_train.columns]
 
 # Merge with X_TRAIN
-df_X_TRAIN = pd.merge(df_X_TRAIN, charsiu_df_by_sample_train, left_index=True, right_index=True)
-
-
+df_X_TRAIN['CHARSIU_mean_speed_wpau'] = charsiu_df_by_sample_train['mean_speed_wpau_v1']
+df_X_TRAIN['CHARSIU_mean_speed_wopau'] = charsiu_df_by_sample_train['mean_speed_wopau_v1']
 
 
 
@@ -167,62 +166,21 @@ BC = B + C
 
 B_ABS_C = B_abs + C
 
-F = ['charsiu_pred_aligment_mean_speed_wpau_v1']
-
-#%% NEW FEATURES
-#G = ['mean_how_many_phones_arFgMax']
-#H = ['mean_how_many_probables_phones']
-N = 1
+F = ['CHARSIU_mean_speed_wpau']
 
 
-mean_phone = df_TRAIN.filter(regex='^mean_phone_*')
-#%% Metric 1
-y_TRAIN = df_TRAIN['mean_speed_wpau_v1']
-y_VAL = df_VAL['mean_speed_wpau_v1']
+
 
 features = [A,B,C,D,BC, F]
-MSE_features_wpau = np.zeros(len(features))
-scores_wpau = np.zeros(len(features))
-for j in range(N):
-    for i in range(len(features)):
-        print('Features:', features[i])
-        X_TRAIN_fi = X_TRAIN[features[i]]
-        X_VAL_fi = X_VAL[features[i]]
-        
-        # Regression
-        positive=True
-        model = linear_model.LinearRegression(positive=positive)
-        model.fit(X_TRAIN_fi, y_TRAIN)
-        y_pred = model.predict(X_VAL_fi)
-        MSE_features_wpau[i] += mean_squared_error(y_VAL, y_pred)
-        scores_wpau[i] += model.score(X_VAL_fi, y_VAL)
+N=2
 
-mean_score_features_wpau = scores_wpau/N
-mean_MSE_features_wpau = MSE_features_wpau/N
-#%%
+y_train = df_TRAIN['mean_speed_wpau_v1']
+y_val = df_VAL['mean_speed_wpau_v1']
+mean_score_features_wpau, mean_MSE_features_wpau = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
 
-
-#%% Metric 2
-y_TRAIN = df_TRAIN['mean_speed_wopau_v1']
-y_VAL = df_VAL['mean_speed_wopau_v1']
-MSE_features_wopau = np.zeros(len(features))
-scores_wopau = np.zeros(len(features))
-for j in range(N):
-    for i in range(len(features)):
-        print('Features:', features[i])
-        X_TRAIN_fi = X_TRAIN[features[i]]
-        X_VAL_fi = X_VAL[features[i]]
-        
-        # Regression
-        positive=True
-        model = linear_model.LinearRegression(positive=positive)
-        model.fit(X_TRAIN_fi, y_TRAIN)
-        y_pred = model.predict(X_VAL_fi)
-        MSE_features_wopau[i] += mean_squared_error(y_VAL, y_pred)
-        scores_wopau[i] += model.score(X_VAL_fi, y_VAL)
-
-mean_score_features_wopau = scores_wopau/N
-mean_MSE_features_wopau = MSE_features_wopau/N
+y_train = df_TRAIN['mean_speed_wopau_v1']
+y_val = df_VAL['mean_speed_wopau_v1']
+mean_score_features_wopau, mean_MSE_features_wopau = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
 
 
 #%%
@@ -239,8 +197,9 @@ plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len
 plt.title('Prediction of the speech rate')
 plt.xlabel('Groups of features')
 plt.ylabel('Mean R2 - '+ str(N) + ' iterations')
+plt.ylim(0, 1)
 plt.legend()
-plt.savefig('a_b_c_d_barplot.png')
+plt.savefig('barplot_mean_speed.png')
 plt.show()
 
 # %%
