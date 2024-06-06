@@ -80,10 +80,16 @@ charsiu_pred_aligment_train = pd.read_csv('../tesis_speechRate/src/processing/me
 charsiu_pred_aligment_train.rename(columns={'phoneme': 'utterance'}, inplace=True)
 charsiu_pred_aligment_test.rename(columns={'phoneme': 'utterance'}, inplace=True)
 
+
 #%% Compute the mean_speed features
 
 
 charsiu_pred_aligment_train['duration_s'] = charsiu_pred_aligment_train['stop'] - charsiu_pred_aligment_train['start']
+charsiu_pred_aligment_train['phone_rate'] = 1/charsiu_pred_aligment_train['duration_s']
+# if utterance is '[SIL]' then phone_rate = 0
+charsiu_pred_aligment_train['phone_rate'] = charsiu_pred_aligment_train['phone_rate'].where(charsiu_pred_aligment_train['utterance'] != '[SIL]', 0)
+
+#%%
 charsiu_df_by_sample_train = ut.TIMIT_df_by_sample_phones(charsiu_pred_aligment_train)
 #%%
 # Each column of charsiu_df_by_sample_train add the name charsiu_pred_aligment 

@@ -1,7 +1,7 @@
 #%%
 import sys
 #from charsiu.src import models
-from charsiu.src.Charsiu import Wav2Vec2ForFrameClassification, CharsiuPreprocessor_en, charsiu_forced_aligner
+from charsiu.src.Charsiu import Wav2Vec2ForFrameClassification, CharsiuPreprocessor_en, charsiu_forced_aligner, charsiu_chain_attention_aligner, charsiu_chain_forced_aligner, charsiu_predictive_aligner
 import torch 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -44,6 +44,20 @@ record_phone_test = pd.read_csv('../tesis_speechRate/src/pre_processing/tables/t
 record_phone_train = pd.read_csv('../tesis_speechRate/src/pre_processing/tables/tables/TIMIT_df_by_record_phone_train.csv')
 sample_phone_train = pd.read_csv('../tesis_speechRate/src/pre_processing/tables/tables/TIMIT_df_by_sample_train.csv')
 sample_phone_test = pd.read_csv('../tesis_speechRate/src/pre_processing/tables/tables/TIMIT_df_by_sample_test.csv')
+
+charsiu_pred_aligment_test = pd.read_csv('../tesis_speechRate/src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_test.csv')
+charsiu_pred_aligment_train = pd.read_csv('../tesis_speechRate/src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_train.csv') 
+
+
+charsiu_pred_aligment_train.rename(columns={'phoneme': 'utterance'}, inplace=True)
+charsiu_pred_aligment_train['duration_s'] = charsiu_pred_aligment_train['stop'] - charsiu_pred_aligment_train['start']
+charsiu_pred_aligment_train['phone_rate'] = 1/charsiu_pred_aligment_train['duration_s']
+charsiu_pred_aligment_train['phone_rate'] = charsiu_pred_aligment_train['phone_rate'].where(charsiu_pred_aligment_train['utterance'] != '[SIL]', 0)
+
+charsiu_pred_aligment_test.rename(columns={'phoneme': 'utterance'}, inplace=True)
+charsiu_pred_aligment_test['duration_s'] = charsiu_pred_aligment_test['stop'] - charsiu_pred_aligment_test['start']
+charsiu_pred_aligment_test['phone_rate'] = 1/charsiu_pred_aligment_test['duration_s']
+charsiu_pred_aligment_test['phone_rate'] = charsiu_pred_aligment_test['phone_rate'].where(charsiu_pred_aligment_test['utterance'] != '[SIL]', 0)
 
 #%% ======================== FUNCTIONS ========================
 
@@ -197,24 +211,32 @@ def speed_df(sample_id, train=True, step_size=5, window_size=20, with_pause=Fals
 
 
     sample_features = record_phone_train[record_phone_train['sample_id'] == sample_id] if train else record_phone_test[record_phone_test['sample_id'] == sample_id]
+    sample_charsiu = charsiu_pred_aligment_train[charsiu_pred_aligment_train['sample_id'] == sample_id] if train else charsiu_pred_aligment_test[charsiu_pred_aligment_test['sample_id'] == sample_id]
     #reset index
     sample_features = sample_features.reset_index(drop=True)
+    sample_charsiu = sample_charsiu.reset_index(drop=True)
+    
     x_wp, y_wp = m1(sample_features, step_size=step_y, window_size=window_y, with_pau=True)    
     x_wop, y_wop = m1(sample_features, step_size=step_y, window_size=window_y, with_pau=False)
+    x_charsiu, y_charsiu = m1(sample_charsiu, step_size=step_y/16000, window_size=window_y/16000, with_pau=False)
 
     df = pd.DataFrame()
-    if len(x_wp) == len(y_wp) == len(x_wop) == len(y_wop) == len(sections):
+    if len(x_wp) == len(y_wp) == len(x_wop) == len(y_wop) == len(sections) == len(x_charsiu) == len(y_charsiu):
         df['x_wp'] = x_wp
         df['y_wp'] = y_wp
         df['x_wop'] = x_wop
         df['y_wop'] = y_wop
+        df['x_charsiu'] = x_charsiu
+        df['y_charsiu'] = y_charsiu
         
     else:
-        L  = min(len(x_wp), len(sections), len(y_wp), len(x_wop), len(x_wop))
+        L  = min(len(x_wp), len(sections), len(y_wp), len(x_wop), len(x_wop), len(y_wop), len(x_charsiu), len(y_charsiu))
         df['x_wp'] = x_wp[:L]
         df['y_wp'] = y_wp[:L]
         df['x_wop'] = x_wop[:L]
         df['y_wop'] = y_wop[:L]
+        df['x_charsiu'] = x_charsiu[:L]
+        df['y_charsiu'] = y_charsiu[:L]
         
     
 
@@ -250,7 +272,7 @@ def generate_data(sample_ids, train=True, step_size=5, window_size=20, with_paus
     tf = time.time()
     print('DONE. Time:' + str(tf-t0) + 's')
 
-
+#%%
 # Generate the data (if it is not already generated)
 #generate_data(SAMPLE_IDs_TRAIN, train=True, step_size=5, window_size=20, with_pause=True)
 
@@ -259,9 +281,20 @@ def generate_data(sample_ids, train=True, step_size=5, window_size=20, with_paus
 data_set_with_pau = pd.read_csv('../tesis_speechRate/src/processing/speed_experiments/data/data_set_train_with_pau.csv')
 #
 # %%
-data_set_with_pau = data_set_with_pau.drop('section', axis=1)
+
+# ==================== ADD CHARSIU TEXTLESS FEATURES ====================
+#%% CHARSIU PRED ALIGMENT
+
+# UNCOMENT IF YOU WANT TO GENERATE THE DATA
+#charsiu_pred_aligment_test =  get_real_speed_CHARSIU_TEXTLESS(sample_ids, data, train=True, step_size=1/60*16000, window_size=1/4*16000, with_pause=False)
 
 
+# charsiu_pred_aligment_test = pd.read_csv('../tesis_speechRate/src/processing/mean_speed_experiments/data/charsiu_<charsiu.src.Charsiu.charsiu_predictive_aligner object at 0x7dc87eec1f90>_test.csv')
+#%%
+x_charsiu, y_charsiu = m1(charsiu_pred_aligment_train, step_size=5/100*16000, window_size=20/100*16000, with_pau=False)
+
+
+#%%
 
 #%% -------------------------- SPLITTING -------------------------------------
 speaker_id = data_set_with_pau['speaker_id'].unique()
@@ -333,10 +366,11 @@ BC = B + C
 
 B_ABS_C = B_abs + C
 
+F = ['y_charsiu']
 
 # %%
-features = [A,B,C,D,BC]
-N=3
+features = [A,B,C,D,BC, F]
+N=1
 y_train = df_TRAIN['y_wp']
 y_val = df_VAL['y_wp']
 mean_score_features_wpau, mean_MSE_features_wpau = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
@@ -353,7 +387,7 @@ fig, ax = plt.subplots()
 rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses v1')
 rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='Without pauses v1')
 
-plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D)), 'BC, dim:'+ str(len(BC))]
+plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D)), 'BC, dim:'+ str(len(BC)), 'F, dim:'+ str(len(F))]
            , rotation=0)
 
 # Add in this plot the name of each feature
@@ -366,3 +400,4 @@ plt.show()
 # %%
 
 # HI
+# %%
