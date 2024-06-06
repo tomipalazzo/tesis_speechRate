@@ -59,6 +59,8 @@ charsiu_pred_aligment_test['duration_s'] = charsiu_pred_aligment_test['stop'] - 
 charsiu_pred_aligment_test['phone_rate'] = 1/charsiu_pred_aligment_test['duration_s']
 charsiu_pred_aligment_test['phone_rate'] = charsiu_pred_aligment_test['phone_rate'].where(charsiu_pred_aligment_test['utterance'] != '[SIL]', 0)
 
+
+
 #%% ======================== FUNCTIONS ========================
 
 
@@ -216,9 +218,13 @@ def speed_df(sample_id, train=True, step_size=5, window_size=20, with_pause=Fals
     sample_features = sample_features.reset_index(drop=True)
     sample_charsiu = sample_charsiu.reset_index(drop=True)
     
+    # SCALLING
+    sample_charsiu['start'] = sample_charsiu['start']*16000
+    sample_charsiu['stop'] = sample_charsiu['stop']*16000
+
     x_wp, y_wp = m1(sample_features, step_size=step_y, window_size=window_y, with_pau=True)    
     x_wop, y_wop = m1(sample_features, step_size=step_y, window_size=window_y, with_pau=False)
-    x_charsiu, y_charsiu = m1(sample_charsiu, step_size=step_y/16000, window_size=window_y/16000, with_pau=False)
+    x_charsiu, y_charsiu = m1(sample_charsiu, step_size=step_y, window_size=window_y, with_pau=False)
 
     df = pd.DataFrame()
     if len(x_wp) == len(y_wp) == len(x_wop) == len(y_wop) == len(sections) == len(x_charsiu) == len(y_charsiu):
@@ -274,7 +280,7 @@ def generate_data(sample_ids, train=True, step_size=5, window_size=20, with_paus
 
 #%%
 # Generate the data (if it is not already generated)
-#generate_data(SAMPLE_IDs_TRAIN, train=True, step_size=5, window_size=20, with_pause=True)
+generate_data(SAMPLE_IDs_TRAIN, train=True, step_size=5, window_size=20, with_pause=True)
 
 # %% Open the data set
 #data_set_with_out_pau = pd.read_csv('../tesis_speechRate/src/processing/speed_experiments/data/data_set_train_with_out_pau.csv')
@@ -369,8 +375,8 @@ B_ABS_C = B_abs + C
 F = ['y_charsiu']
 
 # %%
-features = [A,B,C,D,BC, F]
-N=1
+features = [A,B,C,D,BC, F, B_ABS_C]
+N=10
 y_train = df_TRAIN['y_wp']
 y_val = df_VAL['y_wp']
 mean_score_features_wpau, mean_MSE_features_wpau = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
@@ -387,16 +393,19 @@ fig, ax = plt.subplots()
 rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses v1')
 rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='Without pauses v1')
 
-plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D)), 'BC, dim:'+ str(len(BC)), 'F, dim:'+ str(len(F))]
-           , rotation=0)
+plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D)), 'BC, dim:'+ str(len(BC)),
+                                       'F, dim:'+ str(len(F)), 'B_ABS_C, dim:'+ str(len(B_ABS_C))]
+                                       , rotation=30)
 
 # Add in this plot the name of each feature
 plt.title('Prediction of speed for any time')
 plt.xlabel('Groups of features')
 plt.ylabel('Mean R2 - '+ str(N) + ' iterations')
+plt.ylim(0,1)
 plt.legend()
-plt.savefig('a_b_c_d_barplot.png')
+plt.savefig('barplot_inst_speed.png')
 plt.show()
+
 # %%
 
 # HI

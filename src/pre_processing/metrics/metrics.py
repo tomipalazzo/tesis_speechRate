@@ -31,7 +31,8 @@ def m1(phones, step_size=10, window_size=100, with_pau = False):
     how_many_partialy = 0
     how_many_out = 0
 
-    silence = ['h#', 'pau', 'epi']
+    silence = ['h#', '[SIL]']
+    pause   = ['pau', 'epi']
     for i in range(len(steps)):
         left = max(0, steps[i]-window_size/2)
         right = min(T-1,steps[i]+window_size/2)
@@ -40,8 +41,9 @@ def m1(phones, step_size=10, window_size=100, with_pau = False):
 
 
             onset = start[phone_j]
+            is_pau = phones['utterance'][phone_j] in pause
             is_silence = phones['utterance'][phone_j] in silence
-            if (not is_silence) or (with_pau):
+            if (not is_silence) and (with_pau or not is_pau):
 
     #                is_completely_in_window = (start[phone_i] > left) and (stop[phone_i] < right)
     #                is_completely_out_of_window = (start[phone_i]> right) or (stop[phone_i] < left)
