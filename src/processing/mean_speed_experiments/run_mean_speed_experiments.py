@@ -283,7 +283,8 @@ plt.legend(fontsize='17', title_fontsize='100')
 
 plt.grid(True, which='major', linestyle='--', linewidth='0.5', color='grey')  # Add grid lines for better measurement estimation
 plt.tight_layout()  # Adjust layout to ensure no overlap of text/labels
-#plt.savefig('detailed_barplot_mean_speed_with_tone_variations.png')
+plt.savefig('detailed_barplot_mean_speed_with_tone_variations.png')
+
 plt.show()
 
 
