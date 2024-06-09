@@ -104,36 +104,91 @@ slowers =speaker_metrics.nsmallest(3, 'mean_speed_wpau_v1')
 fasters_data = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(fasters.index)]
 slowers_data = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(slowers.index)]
 
-# Concatenate the data
-fasters_data['type'] = 'faster'
-slowers_data['type'] = 'slower'
-data = pd.concat([fasters_data, slowers_data])
+mean_speed = df_X_TRAIN['mean_speed_wpau_v1']
 
-# Boxplot
+# I need 3 boxplots: 1 of the fasters, 1 of the slowers and 1 using the information of all the data
 
-sns.boxplot(x='speaker_id', y='mean_speed_wpau_v1', data=data, hue='type')
-plt.title('Mean speed by speaker')
+# array of each speaker
+
+
+#%% array of each speaker
+
+l_fasters = []
+l_slowers = []
+for i in fasters.index:
+     l_fasters.append(df_X_TRAIN[df_X_TRAIN['speaker_id'] == i]['mean_speed_wpau_v1'])
+for i in slowers.index:
+     l_slowers.append(df_X_TRAIN[df_X_TRAIN['speaker_id'] == i]['mean_speed_wpau_v1'])
+
+# In opposite order
+l_slowers = l_slowers[::-1]
+
+
+data = l_fasters + [mean_speed] + l_slowers
+
+
+# Sample data
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns  # For better visual appeal
+
+# Setting a style
+sns.set(style="whitegrid")
+
+# Sample data for demonstration
+
+# Concatenating all data
+
+# Define speaker categories
+fasters_id = list(fasters.index)
+slowers_id = list(slowers.index)
+# Slowers in oposite order
+slowers_id = slowers_id[::-1]
+
+# Create the boxplot
+fig, ax = plt.subplots(figsize=(10, 6))
+box = plt.boxplot(data, patch_artist=True)
+
+# Colors for each boxplot: red for fasters, green for 'all', blue for slowers
+colors = ['r', 'r', 'r', 'g', 'b', 'b', 'b']
+
+# Setting colors for each box
+for patch, color in zip(box['boxes'], colors):
+    patch.set_facecolor(color)
+
+# Enhancing the median line visibility
+for median in box['medians']:
+    median.set_color('k')
+    median.set_linewidth(2)  # Make median lines thicker
+
+# Adding labels and title
+plt.ylabel('Velocidad Media', fontsize=14, fontweight='bold')
+plt.xlabel('Hablantes (ID)', fontsize=14, fontweight='bold')
+plt.title('Analisis de la velocidad del habla por hablante', fontsize=16, fontweight='bold')
+
+# Adding custom x-tick labels
+plt.xticks([1+0.15, 2+0.15, 3+0.15, 4+0.15, 5+0.15, 6+0.15, 7+0.15], fasters_id + ['Todos'] + slowers_id, rotation=0, ha='right', fontsize=12)
+
+# Adding grid for better readability
+plt.grid(True, linestyle='--', which='major', color='grey', alpha=0.5)
+
+# Add a legend with custom handles
+from matplotlib.patches import Patch
+legend_elements = [Patch(facecolor='r', label='Rápidos'),
+                   Patch(facecolor='g', label='Todos'),
+                   Patch(facecolor='b', label='Lentos')]
+ax.legend(handles=legend_elements, loc='upper right', fontsize=12)
+
+# Show the plot
+plt.tight_layout()  # Adjust the layout to make room for the rotated x-tick labels
+plt.savefig('boxplot_speakers.png')
+
 plt.show()
+
+
 
 #%% The same boxplot but adding the mean speed of all the speakers (this box bigger than the others)
-# Filter the data
-fasters_data = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(fasters.index)]
-slowers_data = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(slowers.index)]
-
-# Concatenate the data
-fasters_data['type'] = 'faster'
-slowers_data['type'] = 'slower'
-data = pd.concat([fasters_data, slowers_data])
-
-# Boxplot with 3 kind of boxplot: fasters, slowers and all the speakers without axline
-
-sns.boxplot(x='speaker_id', y='mean_speed_wpau_v1', data=data, hue='type')
-plt.axhline(y=df_X_TRAIN['mean_speed_wpau_v1'].mean(), color='r', linestyle='--')
-# Add the text of the mean over the line more high
-plt.text(5.5, df_X_TRAIN['mean_speed_wpau_v1'].mean(), 'mean speed', color='r')
-
-plt.title('Mean speed by speaker')
-plt.show()
 
 
 # %% PCA
@@ -192,53 +247,54 @@ B_ABS_C = B_abs + C
 #%% PCA
 features = A+B+C+D+BC+B_ABS_C
 
-data = df_X_TRAIN[A+B+C+D+B_abs]
-y = df_X_TRAIN['mean_speed_wpau_v1']
+X = X_TRAIN[B]
+y = y_TRAIN
+X_val = X_VAL[B]
+y_val = y_VAL
+
+
 #%% We want to predict y using the features
-# We can use PCA to reduce the dimensionality of the data
 
-# Plot the explicability of dimentions
-pca = PCA()
-pca.fit(data)
-plt.plot(np.cumsum(pca.explained_variance_ratio_))
-plt.xlabel('number of components')
-plt.ylabel('cumulative explained variance')
-plt.show()
+# linear model
+from sklearn.linear_model import LinearRegression
 
-#%%
-# We can see that with 10 components we can explain the 90% of the variance
-pca = PCA(n_components=1000)
-data_pca = pca.fit_transform(data)
-#%%
-# Now we can use the data_pca to train a linear model
-X_train, X_val, y_train, y_val = train_test_split(data_pca, y, test_size=0.2, random_state=42)
+# Create the model
 
-# Linear model
-model = LinearRegression()
-model.fit(X_train, y_train)
+model = LinearRegression(positive=True)
+
+# Fit the model
+
+model.fit(X, y)
+
+# Predict the values
+
 y_pred = model.predict(X_val)
+
+
+
+
 #%%
 # Evaluate the model
 mse = mean_squared_error(y_val, y_pred)
 print('MSE:', mse)
 
+correlation = np.corrcoef(y_val, y_pred)[0, 1]
+
+R2 = model.score(X_val, y_val)   
 #%%
 # Plot the prediction color the speed
-plt.scatter(y_val, y_pred, c=y_val)
+sns.scatterplot(x=y_val, y=y_pred, hue=y_val, palette='coolwarm')
 
 
-
-plt.xlabel('True values')
-plt.ylabel('Predicted values')
-plt.title('True vs Predicted values')
-# Color the speed 
-plt.colorbar()
+plt.xlabel('Velocidad Real')
+plt.ylabel('Predicción')
+plt.title('Prediccion con Atributo B')
+# Add correlation in the legend
+plt.legend(title='Correlation = ' + str(round(correlation,2)), loc='upper left')
 
 plt.show()
 
-#%%
-
-
+#%% correlation
 
 
 

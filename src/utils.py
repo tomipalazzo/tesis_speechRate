@@ -667,4 +667,4 @@ def r2_experiment(df_train, df_val, y_train, y_val, features, N=10):
 
     mean_score_features = scores/N
     mean_MSE_features = MSE_features/N
-    return mean_score_features, mean_MSE_features
+    return mean_score_features, mean_MSE_features, model

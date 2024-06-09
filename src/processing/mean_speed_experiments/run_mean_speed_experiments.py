@@ -52,9 +52,11 @@ phonogram_features_TEST.set_index('sample_id', inplace=True)
 # Merge the phonogram features with the sample_phone dataframes
 sample_phone_train.set_index('sample_id', inplace=True)
 sample_phone_test.set_index('sample_id', inplace=True)
-#%%
+#%% Merge the phonogram features with the sample_phone dataframes 
+
 df_X_TRAIN = pd.merge(phonogram_features_TRAIN, sample_phone_train, left_index=True, right_index=True)
 
+df_X_TEST = pd.merge(phonogram_features_TEST, sample_phone_test, left_index=True, right_index=True)
 
 #%% ================== CHARSIU PRED ALIGMENT ================================
 
@@ -83,14 +85,25 @@ charsiu_pred_aligment_test.rename(columns={'phoneme': 'utterance'}, inplace=True
 
 #%% Compute the mean_speed features
 
-
+# TRAIN
 charsiu_pred_aligment_train['duration_s'] = charsiu_pred_aligment_train['stop'] - charsiu_pred_aligment_train['start']
 charsiu_pred_aligment_train['phone_rate'] = 1/charsiu_pred_aligment_train['duration_s']
 # if utterance is '[SIL]' then phone_rate = 0
 charsiu_pred_aligment_train['phone_rate'] = charsiu_pred_aligment_train['phone_rate'].where(charsiu_pred_aligment_train['utterance'] != '[SIL]', 0)
 
+# TEST
+
+charsiu_pred_aligment_test['duration_s'] = charsiu_pred_aligment_test['stop'] - charsiu_pred_aligment_test['start']
+charsiu_pred_aligment_test['phone_rate'] = 1/charsiu_pred_aligment_test['duration_s']
+# if utterance is '[SIL]' then phone_rate = 0
+charsiu_pred_aligment_test['phone_rate'] = charsiu_pred_aligment_test['phone_rate'].where(charsiu_pred_aligment_test['utterance'] != '[SIL]', 0)
+
+
 #%%
 charsiu_df_by_sample_train = ut.TIMIT_df_by_sample_phones(charsiu_pred_aligment_train)
+
+charsiu_df_by_sample_test = ut.TIMIT_df_by_sample_phones(charsiu_pred_aligment_test)
+
 #%%
 # Each column of charsiu_df_by_sample_train add the name charsiu_pred_aligment 
 #charsiu_df_by_sample_train.columns = ['charsiu_pred_aligment_' + str(col) for col in charsiu_df_by_sample_train.columns]
@@ -98,6 +111,9 @@ charsiu_df_by_sample_train = ut.TIMIT_df_by_sample_phones(charsiu_pred_aligment_
 # Merge with X_TRAIN
 df_X_TRAIN['CHARSIU_mean_speed_wpau'] = charsiu_df_by_sample_train['mean_speed_wpau_v1']
 df_X_TRAIN['CHARSIU_mean_speed_wopau'] = charsiu_df_by_sample_train['mean_speed_wopau_v1']
+
+df_X_TEST['CHARSIU_mean_speed_wpau'] = charsiu_df_by_sample_test['mean_speed_wpau_v1']
+df_X_TEST['CHARSIU_mean_speed_wopau'] = charsiu_df_by_sample_test['mean_speed_wopau_v1']
 
 
 
@@ -124,6 +140,8 @@ y_TRAIN = df_TRAIN['mean_speed_wpau_v1']
 X_VAL = df_VAL.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
 y_VAL = df_VAL['mean_speed_wpau_v1']
 
+X_TEST = df_X_TEST.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
+y_TEST = df_X_TEST['mean_speed_wpau_v1']
 
 
 # %% =================== FEATURES SELECTION ===================================
@@ -172,21 +190,19 @@ BC = B + C
 
 B_ABS_C = B_abs + C
 
-F = ['CHARSIU_mean_speed_wpau']
+E = ['CHARSIU_mean_speed_wpau']
 
 
-
-
-features = [A,B,C,D,BC, F]
-N=2
+features = [A,B,C,D,E,BC,B_ABS_C]
+N=1
 
 y_train = df_TRAIN['mean_speed_wpau_v1']
 y_val = df_VAL['mean_speed_wpau_v1']
-mean_score_features_wpau, mean_MSE_features_wpau = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
+mean_score_features_wpau, mean_MSE_features_wpau, model_wp = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
 
 y_train = df_TRAIN['mean_speed_wopau_v1']
 y_val = df_VAL['mean_speed_wopau_v1']
-mean_score_features_wopau, mean_MSE_features_wopau = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
+mean_score_features_wopau, mean_MSE_features_wopau, model_wop = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
 
 
 #%%
@@ -196,7 +212,7 @@ width = 0.35  # the width of the bars
 fig, ax = plt.subplots()
 rects1 = ax.bar(x - width/2, mean_score_features_wpau, width, label='With pauses v1')
 rects2 = ax.bar(x + width/2, mean_score_features_wopau, width, label='With out pauses v1')
-plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D)), 'BC, dim:'+ str(len(BC)), 'F, dim:'+ str(len(F))]
+plt.xticks(np.arange(len(features)), ['A, dim:' + str(len(A)),'B, dim:'+ str(len(B)),'C, dim:'+ str(len(C)), 'D, dim:'+ str(len(D)), 'BC, dim:'+ str(len(BC)), 'F, dim:'+ str(len(E)), 'B_ABS_C, dim:'+ str(len(B_ABS_C))]
            , rotation=0)
 
 # Add in this plot the name of each feature
@@ -207,5 +223,70 @@ plt.ylim(0, 1)
 plt.legend()
 plt.savefig('barplot_mean_speed.png')
 plt.show()
+
+# %% Barplot with more details
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Sample data
+features = [A,B,B_abs,C,D,E,BC,B_ABS_C]
+
+dimensions = [len(A), len(B),len(B_abs), len(C), len(D), len(E), len(BC), len(B_ABS_C)]
+
+y_train = df_TRAIN['mean_speed_wpau_v1']
+y_val = df_VAL['mean_speed_wpau_v1']
+
+mean_score_features_wpau, mean_MSE_features_wpau, mode_wp = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=1)
+#%%
+y_train = df_TRAIN['mean_speed_wopau_v1']
+y_val = df_VAL['mean_speed_wopau_v1']
+
+mean_score_features_wopau, mean_MSE_features_wopau, model_wop = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=1)
+
+#%%
+# Model WP in test
+
+test_scores_wp = []
+test_scores_wop = []
+for i in range(len(features)):
+     model_wp.fit(df_TRAIN[features[i]], df_TRAIN['mean_speed_wpau_v1'])
+     test_scores_wp.append(model_wp.score(df_X_TEST[features[i]], df_X_TEST['mean_speed_wpau_v1']))
+
+     model_wop.fit(df_TRAIN[features[i]], df_TRAIN['mean_speed_wopau_v1'])
+     test_scores_wop.append(model_wop.score(df_X_TEST[features[i]], df_X_TEST['mean_speed_wopau_v1']))
+
+
+#%%
+x = np.arange(len(features))
+width = 0.15  # Adjusted width to fit six sets within the plot
+
+fig, ax = plt.subplots(figsize=(14, 8))  # Set figure size for better visualization
+rects1 = ax.bar(x - 3*width/2, mean_score_features_wpau, width, label='Entrenamiento con Pausas', color='deepskyblue')
+rects2 = ax.bar(x - width/2, mean_score_features_wopau, width, label='Entrenamiento sin Pausas', color='dodgerblue')
+rects3 = ax.bar(x + width/2, test_scores_wp, width, label='Testeo con Pausas', color='sandybrown')
+rects4 = ax.bar(x + 3*width/2, test_scores_wop, width, label='Testeo sin Pausas', color='darkorange')
+
+# Improve x-ticks
+plt.xticks(np.arange(len(features)), ['A, Dim:' + str(dimensions[0]), 'B, Dim:' + str(dimensions[1]), '|B|, Dim:' + str(dimensions[2]), 'C, Dim:' + str(dimensions[3]), 'D, Dim:' + str(dimensions[4]), 'E, Dim:' + str(dimensions[5]), 'BC, Dim:' + str(dimensions[6]), '|B|C, Dim:' + str(dimensions[7])], rotation=0) 
+                                             
+
+plt.title('Predicciones de la velocidad del habla', fontsize=20)
+plt.xlabel('Grupos de Atributos', fontsize=24)
+plt.ylabel('Coeficiente de Determinación (R2)', fontsize=20)
+plt.ylim(0, 1)  # Adjust ylim to enhance visibility of labels
+# increase the font size of the legend
+
+plt.legend(fontsize='17', title_fontsize='100')
+
+  # Relocate legend to avoid overlap with data
+
+plt.grid(True, which='major', linestyle='--', linewidth='0.5', color='grey')  # Add grid lines for better measurement estimation
+plt.tight_layout()  # Adjust layout to ensure no overlap of text/labels
+#plt.savefig('detailed_barplot_mean_speed_with_tone_variations.png')
+plt.show()
+
+
+
 
 # %%

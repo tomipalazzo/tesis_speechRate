@@ -120,9 +120,9 @@ tick_labels = np.linspace(0, total_seconds, int(3 * total_seconds + 1))
 plt.figure(figsize=(10, 7))
 plt.pcolor(y_softmax)
 plt.xticks(tick_positions, [f"{label:.1f}" for label in tick_labels])  # Set x-ticks to show time in fractional seconds
-plt.title('Posteriogram')
-plt.ylabel('Phonemes')
-plt.xlabel('time(s)')
+plt.title('Posteriograma')
+plt.ylabel('Fonemas')
+plt.xlabel('Tiempo(s)')
 plt.yticks(np.arange(0.5, 42.5, 1), phonemes)
 plt.ylim(0, 40)
 # For each 100 samples, we have 1 second do not plt.xticks(t[::50], t[::50])
@@ -130,7 +130,7 @@ plt.ylim(0, 40)
 
 
 plt.colorbar()
-plt.savefig('posteriogram_sheHasYour.png')
+plt.savefig('posteriograma_sheHasYour.png')
 plt.show()
 
 
