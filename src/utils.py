@@ -648,9 +648,10 @@ def get_real_speed_CHARSIU_TEXTLESS(sample_ids, data, train=True, step_size=1/60
     print('DONE. Time:' + str(tf-t0) + 's')
 
 
-def r2_experiment(df_train, df_val, y_train, y_val, features, N=10):
+def r2_experiment(df_train, df_val, df_test, y_train, y_val, y_test, features, N=10):
     MSE_features = np.zeros(len(features))
     scores = np.zeros(len(features))
+    test_scores = np.zeros(len(features))
     for j in range(N):
         for i in range(len(features)):
             print('Features:', features[i])
@@ -665,6 +666,14 @@ def r2_experiment(df_train, df_val, y_train, y_val, features, N=10):
             MSE_features[i] += mean_squared_error(y_val, y_pred)
             scores[i] += model.score(X_VAL_fi, y_val)
 
+            # Report scores in test
+
+            X_TEST_fi = df_test[features[i]]
+            y_pred = model.predict(X_TEST_fi)
+            test_score = model.score(X_TEST_fi, y_test)
+            test_scores[i] += test_score
+
     mean_score_features = scores/N
     mean_MSE_features = MSE_features/N
-    return mean_score_features, mean_MSE_features, model
+    mean_test_score = test_scores/N
+    return mean_score_features, mean_MSE_features, model, mean_test_score

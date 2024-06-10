@@ -116,32 +116,46 @@ df_X_TEST['CHARSIU_mean_speed_wpau'] = charsiu_df_by_sample_test['mean_speed_wpa
 df_X_TEST['CHARSIU_mean_speed_wopau'] = charsiu_df_by_sample_test['mean_speed_wopau_v1']
 
 
+#%%
+
+
+df_X = df_X_TRAIN
+
+
 
 #%% -------------------------- SPLITTING -------------------------------------
-speaker_id = df_X_TRAIN['speaker_id'].unique()
+speaker_id = df_X['speaker_id'].unique()
 n_speakers = len(speaker_id)
 
-# 80% Train - 20% Val
-n_train = round(0.8*n_speakers)
-n_val = n_speakers - n_train
-# Choose randomly
+# 80% train, 20% VAL
+
+n_train = int(0.8*n_speakers)
+n_val = int(0.2*n_speakers)
+
+# Choose randomly set seed
+random.seed(42)
 random.shuffle(speaker_id)
 speaker_id_train = speaker_id[:n_train]
-speaker_id_val = speaker_id[n_train:]
+speaker_id_val = speaker_id[n_train:n_train+n_val]
+
+
 #%%
 # Filter the speaker_id_train
-df_TRAIN = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(speaker_id_train)]
-df_VAL = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(speaker_id_val)]
+df_TRAIN = df_X[df_X['speaker_id'].isin(speaker_id_train)]
+df_VAL = df_X[df_X['speaker_id'].isin(speaker_id_val)]
+df_TEST = df_X_TEST
 
 
 # %% TRAIN SET
 X_TRAIN  = df_TRAIN.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
-y_TRAIN = df_TRAIN['mean_speed_wpau_v1']
+y_TRAIN = df_TRAIN[['mean_speed_wpau_v1', 'mean_speed_wopau_v1']]
+#%%
+
 X_VAL = df_VAL.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
-y_VAL = df_VAL['mean_speed_wpau_v1']
+y_VAL = df_VAL[['mean_speed_wpau_v1', 'mean_speed_wopau_v1']]
 
 X_TEST = df_X_TEST.drop(columns=['region_id', 'speaker_id', 'mean_speed_wpau_v1', 'mean_speed_wpau_v2', 'mean_speed_wopau_v1', 'mean_speed_wopau_v2'])
-y_TEST = df_X_TEST['mean_speed_wpau_v1']
+y_TEST = df_X_TEST[['mean_speed_wpau_v1', 'mean_speed_wopau_v1']]
 
 
 # %% =================== FEATURES SELECTION ===================================
@@ -193,16 +207,21 @@ B_ABS_C = B_abs + C
 E = ['CHARSIU_mean_speed_wpau']
 
 
-features = [A,B,C,D,E,BC,B_ABS_C]
+features = [A,B,B_abs,C,D,E,BC,B_ABS_C]
+
+#%%
 N=1
 
-y_train = df_TRAIN['mean_speed_wpau_v1']
-y_val = df_VAL['mean_speed_wpau_v1']
-mean_score_features_wpau, mean_MSE_features_wpau, model_wp = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
+y_train = y_TRAIN['mean_speed_wpau_v1']
+y_val = y_VAL['mean_speed_wpau_v1']
+y_test = y_TEST['mean_speed_wpau_v1']
+mean_score_features_wpau, mean_MSE_features_wpau, mode_wp, test_scores_wp= ut.r2_experiment(X_TRAIN, X_VAL,X_TEST, y_train, y_val, y_test, features, N=1)
+#%%
+y_train = y_TRAIN['mean_speed_wopau_v1']
+y_val = y_VAL['mean_speed_wopau_v1']
+y_test = y_TEST['mean_speed_wopau_v1']
 
-y_train = df_TRAIN['mean_speed_wopau_v1']
-y_val = df_VAL['mean_speed_wopau_v1']
-mean_score_features_wopau, mean_MSE_features_wopau, model_wop = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=N)
+mean_score_features_wopau, mean_MSE_features_wopau, model_wop, test_scores_wop = ut.r2_experiment(X_TRAIN, X_VAL,X_TEST, y_train, y_val, y_test, features, N=1)
 
 
 #%%
@@ -234,27 +253,30 @@ features = [A,B,B_abs,C,D,E,BC,B_ABS_C]
 
 dimensions = [len(A), len(B),len(B_abs), len(C), len(D), len(E), len(BC), len(B_ABS_C)]
 
-y_train = df_TRAIN['mean_speed_wpau_v1']
-y_val = df_VAL['mean_speed_wpau_v1']
+y_train = y_TRAIN['mean_speed_wpau_v1']
+y_val = y_VAL['mean_speed_wpau_v1']
+y_test = y_TEST['mean_speed_wpau_v1']
 
-mean_score_features_wpau, mean_MSE_features_wpau, mode_wp = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=1)
+
+mean_score_features_wpau, mean_MSE_features_wpau, mode_wp, test_scores_wp= ut.r2_experiment(X_TRAIN, X_VAL,X_TEST, y_train, y_val, y_test, features, N=1)
 #%%
-y_train = df_TRAIN['mean_speed_wopau_v1']
-y_val = df_VAL['mean_speed_wopau_v1']
+y_train = y_TRAIN['mean_speed_wopau_v1']
+y_val = y_VAL['mean_speed_wopau_v1']
+y_test = y_TEST['mean_speed_wopau_v1']
 
-mean_score_features_wopau, mean_MSE_features_wopau, model_wop = ut.r2_experiment(df_TRAIN, df_VAL, y_train, y_val, features, N=1)
+mean_score_features_wopau, mean_MSE_features_wopau, model_wop, test_scores_wop = ut.r2_experiment(X_TRAIN, X_VAL,X_TEST, y_train, y_val, y_test, features, N=1)
 
-#%%
-# Model WP in test
-
-test_scores_wp = []
-test_scores_wop = []
-for i in range(len(features)):
-     model_wp.fit(df_TRAIN[features[i]], df_TRAIN['mean_speed_wpau_v1'])
-     test_scores_wp.append(model_wp.score(df_X_TEST[features[i]], df_X_TEST['mean_speed_wpau_v1']))
-
-     model_wop.fit(df_TRAIN[features[i]], df_TRAIN['mean_speed_wopau_v1'])
-     test_scores_wop.append(model_wop.score(df_X_TEST[features[i]], df_X_TEST['mean_speed_wopau_v1']))
+##%%
+## Model WP in test
+#
+#test_scores_wp = []
+#test_scores_wop = []
+#for i in range(len(features)):
+#     model_wp.fit(X_TRAIN[features[i]], y_TRAIN['mean_speed_wpau_v1'])
+#     test_scores_wp.append(model_wp.score(X_TEST[features[i]], y_TEST['mean_speed_wpau_v1']))
+#
+#     model_wop.fit(X_TRAIN[features[i]], y_TRAIN['mean_speed_wopau_v1'])
+#     test_scores_wop.append(model_wop.score(X_TEST[features[i]], y_TEST['mean_speed_wopau_v1']))
 
 
 #%%
@@ -283,11 +305,20 @@ plt.legend(fontsize='17', title_fontsize='100')
 
 plt.grid(True, which='major', linestyle='--', linewidth='0.5', color='grey')  # Add grid lines for better measurement estimation
 plt.tight_layout()  # Adjust layout to ensure no overlap of text/labels
-plt.savefig('detailed_barplot_mean_speed_with_tone_variations.png')
+plt.savefig('experiment_1.png')
 
 plt.show()
 
 
 
 
+# %% Correlation Matrix
+
+# Compute the correlation matrix
+corr = df_TRAIN[A+D+E].corr()
+
+# plot the heatmap
+sns.heatmap(corr, 
+        xticklabels=corr.columns,
+        yticklabels=corr.columns, cmap='coolwarm')
 # %%

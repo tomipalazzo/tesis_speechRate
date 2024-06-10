@@ -90,15 +90,15 @@ std_speaker = df_X_TRAIN.groupby('speaker_id')['mean_speed_wpau_v1'].std()
 speaker_metrics = pd.concat([mean_speaker, std_speaker], axis=1)
 speaker_metrics.columns = ['mean_speed_wpau_v1', 'std_speed_wpau_v1']
 #%%
-# The 3 speakers with the highest mean speed
-fasters = speaker_metrics.nlargest(3, 'mean_speed_wpau_v1')
-# The 3 speakers with the lowest mean speed
-slowers =speaker_metrics.nsmallest(3, 'mean_speed_wpau_v1')
 
 #%%
 
 # Boxplot of the fasters and slowers speakers in the same plot 2 colors, one for fasters and one for slowers
 
+# The 3 speakers with the highest mean speed
+fasters = speaker_metrics.nlargest(3, 'mean_speed_wpau_v1')
+# The 3 speakers with the lowest mean speed
+slowers =speaker_metrics.nsmallest(3, 'mean_speed_wpau_v1')
 
 # Filter the data
 fasters_data = df_X_TRAIN[df_X_TRAIN['speaker_id'].isin(fasters.index)]
@@ -188,9 +188,50 @@ plt.show()
 
 
 
-#%% The same boxplot but adding the mean speed of all the speakers (this box bigger than the others)
 
 
+
+
+#%% Now overlaping using seaborn
+
+# Create the histogram
+
+# Define the data
+data = pd.DataFrame({'Con Pausas':df_X_TRAIN['mean_speed_wpau_v1'], 'Sin Pausas':df_X_TRAIN['mean_speed_wopau_v1']})
+
+
+
+
+#%%
+# Define the labels
+
+# Create the histogram with seaborn - normaliced
+
+fig, ax = plt.subplots(figsize=(10, 6))
+# Labels: Con pausas, Sin pausas
+sns.histplot(data, bins=20, color='b', alpha=0.5, kde=True, stat='density')
+# add labels
+
+
+# Adding labels and title
+
+plt.xlabel('Velocidad Media', fontsize=14, fontweight='bold')
+plt.ylabel('Densidad', fontsize=14, fontweight='bold')
+plt.title('Velocidad del Habla', fontsize=16, fontweight='bold')
+
+# Adding a legend
+
+plt.legend(title='Tipo de velocidad', loc='upper right', fontsize=12, labels=['Con Pausas', 'Sin Pausas'])
+
+
+# Adding grid for better readability
+
+plt.grid(True, linestyle='--', which='major', color='grey', alpha=0.5)
+
+# Show the plot
+plt.tight_layout()
+plt.savefig('histogram_speed_wpau_wopau.png')
+plt.show()
 # %% PCA
 from sklearn.decomposition import PCA
 
@@ -297,5 +338,113 @@ plt.show()
 #%% correlation
 
 
+
+# %% Region distribution
+
+# Region metrics
+
+# Mean speed by region
+
+mean_region = df_X_TRAIN.groupby('region_id')['mean_speed_wpau_v1'].mean()
+# Standard deviation of the speed by region
+std_region = df_X_TRAIN.groupby('region_id')['mean_speed_wpau_v1'].std()
+#%%
+# Merge
+region_metrics = pd.concat([mean_region, std_region], axis=1)
+region_metrics.columns = ['mean_speed_wpau_v1', 'std_speed_wpau_v1']
+
+#%%
+# Boxplot of the fasters and slowers speakers in the same plot 2 colors, one for fasters and one for slowers
+
+# The regions with the highest mean speed
+
+fasters = region_metrics.nlargest(3, 'mean_speed_wpau_v1')
+# The regions with the lowest mean speed
+slowers = region_metrics.nsmallest(3, 'mean_speed_wpau_v1')
+
+# Filter the data
+fasters_data = df_X_TRAIN[df_X_TRAIN['region_id'].isin(fasters.index)]
+slowers_data = df_X_TRAIN[df_X_TRAIN['region_id'].isin(slowers.index)]
+
+mean_speed = df_X_TRAIN['mean_speed_wpau_v1']
+
+#%% I need 3 boxplots: 1 of the fasters, 1 of the slowers and 1 using the information of all the data
+
+# array of each region
+
+l_fasters = []
+l_slowers = []
+for i in fasters.index:
+     l_fasters.append(df_X_TRAIN[df_X_TRAIN['region_id'] == i]['mean_speed_wpau_v1'])
+
+for i in slowers.index:
+     l_slowers.append(df_X_TRAIN[df_X_TRAIN['region_id'] == i]['mean_speed_wpau_v1'])
+
+# In opposite order
+
+l_slowers = l_slowers[::-1]
+
+data = l_fasters + [mean_speed] + l_slowers
+#%%
+# Sample data
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns  # For better visual appeal
+
+# Setting a style
+sns.set(style="whitegrid")
+
+# Sample data for demonstration
+
+# Concatenating all data
+
+# Define speaker categories
+
+fasters_id = list(fasters.index)
+slowers_id = list(slowers.index)
+# Slowers in oposite order
+slowers_id = slowers_id[::-1]
+
+# Create the boxplot
+
+fig, ax = plt.subplots(figsize=(10, 6))
+box = plt.boxplot(data, patch_artist=True)
+
+# Colors for each boxplot: red for fasters, green for 'all', blue for slowers
+colors = ['r', 'r', 'r', 'g', 'b', 'b', 'b']
+
+# Setting colors for each box
+for patch, color in zip(box['boxes'], colors):
+    patch.set_facecolor(color)
+
+# Enhancing the median line visibility
+for median in box['medians']:
+    median.set_color('k')
+    median.set_linewidth(2)  # Make median lines thicker
+
+# Adding labels and title
+plt.ylabel('Velocidad Media', fontsize=14, fontweight='bold')
+plt.xlabel('Región (ID)', fontsize=14, fontweight='bold')
+plt.title('Analisis de la velocidad del habla por Región', fontsize=16, fontweight='bold')
+
+# Adding custom x-tick labels
+plt.xticks([1+0.15, 2+0.15, 3+0.15, 4+0.15, 5+0.15, 6+0.15, 7+0.15], fasters_id + ['Todos'] + slowers_id, rotation=0, ha='right', fontsize=12)
+
+# Adding grid for better readability
+plt.grid(True, linestyle='--', which='major', color='grey', alpha=0.5)
+
+# Add a legend with custom handles
+from matplotlib.patches import Patch
+legend_elements = [Patch(facecolor='r', label='Rápidos'),
+                   Patch(facecolor='g', label='Todos'),
+                   Patch(facecolor='b', label='Lentos')]
+ax.legend(handles=legend_elements, loc='upper right', fontsize=12)
+
+# Show the plot
+plt.tight_layout()  # Adjust the layout to make room for the rotated x-tick labels
+plt.savefig('boxplot_region.png')
+
+plt.show()
 
 # %%
